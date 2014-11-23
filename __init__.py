@@ -174,7 +174,7 @@ class ConfigHelper:
 				pass
 
 			if not self.config['{}.warnings.enable.performance_platform'.format(lang)]:
-				flags.append('-Wno-padded')
+				flags += ['-Wno-padded', '-Wno-packed']
 
 			return flags
 		raise Exception('Unknown compiler: {}'.format(compiler))
