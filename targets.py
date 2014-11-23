@@ -97,8 +97,6 @@ class CreateFile(Target):
 		file_name = config['file.name']
 		logging.debug('Creating file: {}'.format(file_name))
 		with open(config['file.name'], 'w') as f:
-			print(repr(config.config))
-			print(repr(config['target.quex_extract.source_dir']))
 			f.write(config['file.content'])
 		os.chmod(file_name, config['file.mode'])
 
