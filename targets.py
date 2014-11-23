@@ -59,11 +59,12 @@ class Target:
 		os.makedirs(target_dir, exist_ok=True)
 		files_list = config.helper.execute(
 			['tar', 'tf', archive_file],
-			stdout=subprocess.PIPE
+			capture_stdout=True
 		)[0]
 		files_list = files_list.decode('utf-8').splitlines()
 		files_list = [ i.split(os.path.sep) for i in files_list ]
 		files_list = [ ('' if len(i) == 0 else (('' if len(i) ==1 else i[1]) if i[0] == '.' else i[0]))  for i in files_list ]
+		files_list = [ i for i in files_list if len(i) > 0 ]
 		files_list = set(files_list)
 		extracted_dir = next(iter(files_list)) if len(files_list) == 1 else None
 		extracted_dir_path = os.path.join(target_dir, extracted_dir if extracted_dir else self.code)
@@ -76,7 +77,7 @@ class Target:
 				cwd=target_dir
 			)
 		else:
-			logging.debug('Output {} already exists, skipping extraction.'.format(extracted_dir))
+			logging.debug('Output {} already exists, skipping extraction.'.format(extracted_dir_path))
 
 		logging.debug('Extracting {} to {} done.'.format(archive_file, target_dir))
 		return extracted_dir_path
@@ -84,9 +85,13 @@ class Target:
 	def make(self, config, directory, targets=[]):
 		logging.debug('Making {}...'.format(self.name))
 		config.helper.execute(
-			['make', '-j{}'.format(os.cpu_count())]+targets,
-			cwd=directory
+#			['make', '-j{}'.format( min(os.cpu_count(), 1)  )]+targets,
+			['script', '-q', '/dev/null', 'cmake', '-E', 'cmake_echo_color', '--cyan', 'Running CMake cache editor...'],
+#			'cmake -E cmake_echo_color --cyan "Running CMake cache editor..."',
+			cwd=directory#, stdout=subprocess.PIPE, stderr=subprocess.PIPE
 		)
+#		open('/Users/mplucinski/stdout.log', 'wb').write(out)
+#		open('/Users/mplucinski/stderr.log', 'wb').write(err)
 		logging.debug('Making {} done.'.format(self.name))
 
 	def _path_build(self, config):

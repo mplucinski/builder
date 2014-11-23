@@ -2,12 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import fcntl
 import logging
 import os
 import os.path
+import pty
 import re
 import subprocess
 import sys
+import threading
 import types
 
 def directory_of_file(file_name):
@@ -36,32 +39,122 @@ class Compiler:
 class CompilerClang:
 	pass
 
-class ConfigHelper:
-	def __init__(self, config):
-		self.config = config
+class Process:
+	@staticmethod
+	def set_nonblocking(fd):
+		flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+		flags = flags | os.O_NONBLOCK
+		fcntl.fcntl(fd, fcntl.F_SETFL, flags)
 
-	def execute(self, args, cwd=None, env=None, inherit_env=False, stdout=None,
-				stderr=None):
+	def __init__(self, args, cwd=None, capture_stdout=False, capture_stderr=False):
 		logging.info('Running {}...'.format(args[0]))
 		logging.debug('Parameters: {}'.format(args))
 		logging.debug('Working directory: {}'.format(cwd))
 
-		_env = copy.deepcopy(os.environ) if inherit_env else {}
-		_env.update(self.config.get('env', {}))
-		if env is not None:
-			_env.update(env)
+		self._log('__init__({})'.format(args))
 
-		logging.debug('Environment: {}'.format(_env))
+		self.args = args
 
-		process = subprocess.Popen(args, cwd=cwd, env=_env, stdout=stdout,
-				stderr=stderr)
-		output = process.communicate()
-		result = process.wait()
+		self.buffer_stdout = bytearray()
+		self.buffer_stderr = bytearray()
+
+		master_stdout, slave_stdout = pty.openpty()
+		master_stderr, slave_stderr = pty.openpty()
+
+		Process.set_nonblocking(master_stdout)
+		Process.set_nonblocking(master_stderr)
+
+		self.process = subprocess.Popen(args, bufsize=0, cwd=cwd,
+			stdout=slave_stdout, stderr=slave_stderr)
+
+		self._reader_stdout = self.reader(master_stdout, capture_stdout,
+									self.buffer_stdout, sys.stdout.buffer)
+		self._reader_stderr = self.reader(master_stderr, capture_stderr,
+									self.buffer_stderr, sys.stderr.buffer)
+
+	def reader(self, *args):
+		stop = threading.Event()
+		done = threading.Event()
+		thread = threading.Thread(target=self._reader, args=list(args)+[stop, done])
+		thread.start()
+		return (stop, done)
+
+	def reader_join(self, stop, done):
+		stop.set()
+		done.wait()
+
+	def communicate(self):
+		result = self.process.wait()
+		self._log('PROCESS FINISHED')
+
+		self.reader_join(*self._reader_stdout)
+		self.reader_join(*self._reader_stderr)
+
+		self._log('STDOUT: {}'.format(self.buffer_stdout))
+		self._log('STDERR: {}'.format(self.buffer_stderr))
+
+		self._log('READING FINISHED')
+
+		logging.info('Running {} done.'.format(self.args[0]))
+
 		if result != 0:
-			raise subprocess.CalledProcessError(result, args)
+			raise subprocess.CalledProcessError(result, self.args)
 
-		logging.info('Running {} done'.format(args[0]))
-		return output
+		return (self.buffer_stdout, self.buffer_stderr)
+
+	def _log(self, msg):
+#		print('>>> PROCESS: {}'.format(msg))
+		pass
+
+	def _reader(self, fd, capture, buffer, pass_to, stop, done):
+		self._log('_reader({})'.format(fd))
+		while not stop.is_set():
+			try:
+				b = os.read(fd, 4096)
+				if capture:
+					buffer.extend(b)
+				else:
+					pass_to.write(b)
+			except BlockingIOError:
+				pass
+
+		done.set()
+
+class ConfigHelper:
+	def __init__(self, config):
+		self.config = config
+
+	def execute(self, *args, **kwargs):
+		return Process(*args, **kwargs).communicate()
+
+#	def execute(self, args, cwd=None, env=None, inherit_env=False, shell=False):
+#		logging.info('Running {}...'.format(args[0]))
+#		logging.debug('Parameters: {}'.format(args))
+#		logging.debug('Working directory: {}'.format(cwd))
+#
+#		_env = copy.deepcopy(os.environ) if inherit_env else {}
+#		_env.update(self.config.get('env', {}))
+#		if env is not None:
+#			_env.update(env)
+#
+#		logging.debug('Environment: {}'.format(_env))
+#
+#		master_stdout, slave_stdout = pty.openpty()
+#		master_stderr, slave_stderr = pty.openpty()
+#
+#		process = subprocess.Popen(args, cwd=cwd, env=_env, stdout=slave_stdout,
+#				stderr=slave_stderr, shell=shell)
+#
+#		stdout_thread = threading.Thread(target=reader, args=[master_stdout])
+#		stderr_thread = threading.Thread(target=reader, args=[master_stderr])
+#
+#		#output = process.communicate()
+#		result = process.wait()
+#		if result != 0:
+#			raise subprocess.CalledProcessError(result, args)
+#
+#		logging.info('Running {} done'.format(args[0]))
+#		return None
 
 	def c_cxx_detect_compiler(self, lang):
 		return self.detect_compiler(self.config['{}.compiler'.format(lang)])
