@@ -48,7 +48,7 @@ class Process:
 		fcntl.fcntl(fd, fcntl.F_SETFL, flags)
 
 	def __init__(self, args, cwd=None, env=None, capture_stdout=False, capture_stderr=False):
-		logging.info('Running {}...'.format(args[0]))
+		logging.debug('Running {}...'.format(args[0]))
 		logging.debug('Parameters: {}'.format(args))
 		logging.debug('Working directory: {}'.format(cwd))
 		logging.debug('Environment: {}'.format(env))
@@ -91,7 +91,7 @@ class Process:
 		self.reader_join(*self._reader_stdout)
 		self.reader_join(*self._reader_stderr)
 
-		logging.info('Running {} done.'.format(self.args[0]))
+		logging.debug('Running {} done.'.format(self.args[0]))
 
 		if result != 0:
 			raise subprocess.CalledProcessError(result, self.args)
@@ -147,23 +147,34 @@ class ConfigHelper:
 	def c_cxx_warning_flags(self, compiler, lang):
 		flags = []
 		if compiler[0] == 'clang':
-			if self.config.has('{}.warnings'.format(lang)):
-				errors = self.config.get('{}.warnings.errors'.format(lang), False)
+			errors = self.config['{}.warnings.errors'.format(lang)]
+			if errors:
+				flags.append('-Werror')
 
-				if errors:
-					flags.append('-Werror')
+			flags.append('-Weverything')
 
-				if self.config.has('{}.warnings.enable'.format(lang)):
-					enable = self.config['{}.warnings.enable'.format(lang)]
+			if not self.config['{}.warnings.enable.normal'.format(lang)]:
+				pass
 
-					if 'all' in enable:
-						flags.append('-Weverything')
+			if self.config['{}.warnings.enable.extensions'.format(lang)]:
+				if not errors:
+					flags.append('-pedantic')
+				else:
+					flags.append('-pedantic-errors')
 
-					if 'extensions' in enable:
-						if not errors:
-							flags.append('-pedantic')
-						else:
-							flags.append('-pedantic-errors')
+			if not self.config['{}.warnings.enable.compatibility'.format(lang)]:
+				if lang == 'c':
+					flags += ['-Wno-c99-compat', '-Wno-c99-compat-pedantic']
+				elif lang == 'cxx':
+					flags += ['-Wno-c++98-compat', '-Wno-c++98-compat-pedantic']
+				else:
+					raise Exception('Unknown language: {}'.format(lang))
+
+			if not self.config['{}.warnings.enable.performance'.format(lang)]:
+				pass
+
+			if not self.config['{}.warnings.enable.performance_platform'.format(lang)]:
+				flags.append('-Wno-padded')
 
 			return flags
 		raise Exception('Unknown compiler: {}'.format(compiler))
@@ -263,19 +274,35 @@ class Config:
 		if parent_scope:
 			self.parent.set(name, value)
 
-class Builder:
-	_default_config=dict(
-		verbose=False,
-		directory=dict(
-			archive=lambda config: os.path.join(config['directory.root'], 'archives'),
-			binary= lambda config: os.path.join(config['directory.root'], 'bin'     ),
-			include=lambda config: os.path.join(config['directory.root'], 'include' ),
-			library=lambda config: os.path.join(config['directory.root'], 'lib'     ),
-			share=  lambda config: os.path.join(config['directory.root'], 'share'   ),
-			source= lambda config: os.path.join(config['directory.root'], 'src'     )
-		)
+_default_c_cxx_warnings=dict(
+	errors=False, #treat warnings as errors
+	enable=dict(
+		normal=True, # "normal" warnings, like 'signedness' incompatibility
+		extensions=False, # warn on language extensions
+		compatibility=False, # warn on incompatibilities with older standards, like C99 or C++03
+		performance=True, # warn on general performance issues
+		performance_platform=False # warn on platform-specific performance issues
 	)
+)
+_default_config=dict(
+	verbose=False,
+	directory=dict(
+		archive=lambda config: os.path.join(config['directory.root'], 'archives'),
+		binary= lambda config: os.path.join(config['directory.root'], 'bin'     ),
+		include=lambda config: os.path.join(config['directory.root'], 'include' ),
+		library=lambda config: os.path.join(config['directory.root'], 'lib'     ),
+		share=  lambda config: os.path.join(config['directory.root'], 'share'   ),
+		source= lambda config: os.path.join(config['directory.root'], 'src'     )
+	),
+	c=dict(
+		warnings=_default_c_cxx_warnings
+	),
+	cxx=dict(
+		warnings=_default_c_cxx_warnings
+	)
+)
 
+class Builder:
 	def __init__(self, source_dir, target_dir, **kwargs):
 		parser = argparse.ArgumentParser(description='Builder - Integration-centered build system')
 		parser.add_argument('-v', '--verbose', action='store_true',
@@ -284,7 +311,7 @@ class Builder:
 
 		self.source_dir = os.path.normpath(source_dir)
 		self.target_dir = os.path.normpath(target_dir)
-		self.config = Config(config=Builder._default_config).merged(kwargs)
+		self.config = Config(config=_default_config).merged(kwargs)
 		self.config.set('verbose', args.verbose)
 
 		self.platforms = []
