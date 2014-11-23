@@ -72,6 +72,7 @@ class Target:
 			if not extracted_dir:
 				os.makedirs(extracted_dir_path, exist_ok=True)
 				target_dir = extracted_dir_path
+			logging.debug('Actual extraction in {}'.format(target_dir))
 			config.helper.execute(
 				['tar', 'xf', archive_file],
 				cwd=target_dir
@@ -85,13 +86,9 @@ class Target:
 	def make(self, config, directory, targets=[]):
 		logging.debug('Making {}...'.format(self.name))
 		config.helper.execute(
-#			['make', '-j{}'.format( min(os.cpu_count(), 1)  )]+targets,
-			['script', '-q', '/dev/null', 'cmake', '-E', 'cmake_echo_color', '--cyan', 'Running CMake cache editor...'],
-#			'cmake -E cmake_echo_color --cyan "Running CMake cache editor..."',
+			['make', '-j{}'.format(os.cpu_count())]+targets,
 			cwd=directory#, stdout=subprocess.PIPE, stderr=subprocess.PIPE
 		)
-#		open('/Users/mplucinski/stdout.log', 'wb').write(out)
-#		open('/Users/mplucinski/stderr.log', 'wb').write(err)
 		logging.debug('Making {} done.'.format(self.name))
 
 	def _path_build(self, config):
@@ -145,7 +142,7 @@ class Autotools(Target):
 		logging.info('Configuring {}...'.format(self.name))
 		config.helper.execute(
 			[
-				'./configure', '--prefix={}'.format(config['root_dir'])
+				'./configure', '--prefix={}'.format(config['directory.root'])
 			],
 			env={
 				'CC': config['c.compiler'],

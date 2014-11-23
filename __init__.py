@@ -11,6 +11,7 @@ import re
 import subprocess
 import sys
 import threading
+import time
 import types
 
 def directory_of_file(file_name):
@@ -46,12 +47,11 @@ class Process:
 		flags = flags | os.O_NONBLOCK
 		fcntl.fcntl(fd, fcntl.F_SETFL, flags)
 
-	def __init__(self, args, cwd=None, capture_stdout=False, capture_stderr=False):
+	def __init__(self, args, cwd=None, env=None, capture_stdout=False, capture_stderr=False):
 		logging.info('Running {}...'.format(args[0]))
 		logging.debug('Parameters: {}'.format(args))
 		logging.debug('Working directory: {}'.format(cwd))
-
-		self._log('__init__({})'.format(args))
+		logging.debug('Environment: {}'.format(env))
 
 		self.args = args
 
@@ -64,7 +64,7 @@ class Process:
 		Process.set_nonblocking(master_stdout)
 		Process.set_nonblocking(master_stderr)
 
-		self.process = subprocess.Popen(args, bufsize=0, cwd=cwd,
+		self.process = subprocess.Popen(args, bufsize=0, cwd=cwd, env=env,
 			stdout=slave_stdout, stderr=slave_stderr)
 
 		self._reader_stdout = self.reader(master_stdout, capture_stdout,
@@ -85,15 +85,11 @@ class Process:
 
 	def communicate(self):
 		result = self.process.wait()
-		self._log('PROCESS FINISHED')
+
+		time.sleep(0.1)
 
 		self.reader_join(*self._reader_stdout)
 		self.reader_join(*self._reader_stderr)
-
-		self._log('STDOUT: {}'.format(self.buffer_stdout))
-		self._log('STDERR: {}'.format(self.buffer_stderr))
-
-		self._log('READING FINISHED')
 
 		logging.info('Running {} done.'.format(self.args[0]))
 
@@ -102,19 +98,15 @@ class Process:
 
 		return (self.buffer_stdout, self.buffer_stderr)
 
-	def _log(self, msg):
-#		print('>>> PROCESS: {}'.format(msg))
-		pass
-
 	def _reader(self, fd, capture, buffer, pass_to, stop, done):
-		self._log('_reader({})'.format(fd))
 		while not stop.is_set():
 			try:
-				b = os.read(fd, 4096)
+				b = os.read(fd, 4096 if capture else 1)
 				if capture:
 					buffer.extend(b)
 				else:
 					pass_to.write(b)
+					pass_to.flush()
 			except BlockingIOError:
 				pass
 
@@ -125,42 +117,22 @@ class ConfigHelper:
 		self.config = config
 
 	def execute(self, *args, **kwargs):
-		return Process(*args, **kwargs).communicate()
+		inherit_env = kwargs.pop('inherit_env', False)
+		env = kwargs.pop('env', None)
 
-#	def execute(self, args, cwd=None, env=None, inherit_env=False, shell=False):
-#		logging.info('Running {}...'.format(args[0]))
-#		logging.debug('Parameters: {}'.format(args))
-#		logging.debug('Working directory: {}'.format(cwd))
-#
-#		_env = copy.deepcopy(os.environ) if inherit_env else {}
-#		_env.update(self.config.get('env', {}))
-#		if env is not None:
-#			_env.update(env)
-#
-#		logging.debug('Environment: {}'.format(_env))
-#
-#		master_stdout, slave_stdout = pty.openpty()
-#		master_stderr, slave_stderr = pty.openpty()
-#
-#		process = subprocess.Popen(args, cwd=cwd, env=_env, stdout=slave_stdout,
-#				stderr=slave_stderr, shell=shell)
-#
-#		stdout_thread = threading.Thread(target=reader, args=[master_stdout])
-#		stderr_thread = threading.Thread(target=reader, args=[master_stderr])
-#
-#		#output = process.communicate()
-#		result = process.wait()
-#		if result != 0:
-#			raise subprocess.CalledProcessError(result, args)
-#
-#		logging.info('Running {} done'.format(args[0]))
-#		return None
+		_env = copy.deepcopy(os.environ) if inherit_env else dict()
+		_env.update(self.config.get('env', {}))
+		if env is not None:
+			_env.update(env)
+
+		kwargs['env'] = _env
+		return Process(*args, **kwargs).communicate()
 
 	def c_cxx_detect_compiler(self, lang):
 		return self.detect_compiler(self.config['{}.compiler'.format(lang)])
 
 	def detect_compiler(self, compiler):
-		(out, err) = self.execute([compiler, '-v'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		(out, err) = self.execute([compiler, '-v'], capture_stdout=True, capture_stderr=True)
 		out = out.decode('utf-8').splitlines()
 		err = err.decode('utf-8').splitlines()
 		if len(err) > 0:
@@ -176,7 +148,7 @@ class ConfigHelper:
 		flags = []
 		if compiler[0] == 'clang':
 			if self.config.has('{}.warnings'.format(lang)):
-				errors = self.config['{}.warnings.errors'.format(lang)]
+				errors = self.config.get('{}.warnings.errors'.format(lang), False)
 
 				if errors:
 					flags.append('-Werror')
@@ -253,7 +225,7 @@ class Config:
 
 	def has(self, name):
 		try:
-			self.get(name)
+			self[name]
 			return True
 		except KeyError:
 			return False
