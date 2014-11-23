@@ -213,10 +213,15 @@ class Builder:
 
 	def __init__(self, source_dir, target_dir, **kwargs):
 		parser = argparse.ArgumentParser(description='Builder - Integration-centered build system')
+		parser.add_argument('-v', '--verbose', action='store_true',
+				help='Verbose output')
+		args = parser.parse_args()
 
 		self.source_dir = os.path.normpath(source_dir)
 		self.target_dir = os.path.normpath(target_dir)
 		self.config = Config(config=Builder._default_config).merged(kwargs)
+		self.config.set('verbose', args.verbose)
+
 		self.platforms = []
 		self.targets = []
 		_init_logger(logging.DEBUG if self.config['verbose'] else logging.INFO)
