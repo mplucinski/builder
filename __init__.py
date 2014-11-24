@@ -106,9 +106,12 @@ class Process:
 					buffer.extend(b)
 				else:
 					pass_to.write(b)
-					pass_to.flush()
+					if b'\n' in b:
+						pass_to.flush()
 			except BlockingIOError:
 				pass
+
+		pass_to.flush()
 
 		done.set()
 
