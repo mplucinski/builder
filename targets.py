@@ -182,6 +182,10 @@ class CMake(Target):
 				]+self._cmake_defs(config, {
 					'CMAKE_C_COMPILER': config['c.compiler'],
 					'CMAKE_CXX_COMPILER': config['cxx.compiler'],
+					'CMAKE_C_COMPILER_ID': config.helper.detect_compiler(config['c.compiler'])[0],
+					'CMAKE_CXX_COMPILER_ID': config.helper.detect_compiler(config['cxx.compiler'])[0],
+					'CMAKE_C_COMPILER_VERSION': config.helper.detect_compiler(config['c.compiler'])[1],
+					'CMAKE_CXX_COMPILER_VERSION': config.helper.detect_compiler(config['cxx.compiler'])[1],
 					'CMAKE_C_FLAGS': ' '.join(config.helper.c_compilation_flags()),
 					'CMAKE_CXX_FLAGS': ' '.join(config.helper.cxx_compilation_flags()),
 					'CMAKE_INSTALL_PREFIX': config['directory.root']
