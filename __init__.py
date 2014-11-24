@@ -167,7 +167,7 @@ class ConfigHelper:
 
 			if not self.config['{}.warnings.enable.compatibility'.format(lang)]:
 				if lang == 'c':
-					flags += ['-Wno-c99-compat', '-Wno-c99-compat-pedantic']
+					flags += ['-Wno-c99-compat']
 				elif lang == 'cxx':
 					flags += ['-Wno-c++98-compat', '-Wno-c++98-compat-pedantic']
 				else:
