@@ -157,7 +157,7 @@ class ConfigHelper:
 			flags.append('-Weverything')
 
 			if not self.config['{}.warnings.enable.normal'.format(lang)]:
-				pass
+				flags.append('-Wno-everything')
 
 			if self.config['{}.warnings.enable.extensions'.format(lang)]:
 				if not errors:
