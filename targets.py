@@ -104,6 +104,19 @@ class Target:
 	def _path_build(self, config):
 		return os.path.join(config['directory.source'], '{}-build'.format(self.code))
 
+class Patch(Target):
+	def build(self, config):
+		if config['skip']:
+			return
+		patch_file = config['file']
+		directory = config['directory']
+		logging.debug('Patching {} in {}'.format(patch_file, directory))
+		config.helper.execute(
+			['patch', '-p0'],
+			cwd=directory,
+			stdin=open(patch_file, 'rb')
+		)
+
 class CreateFile(Target):
 	def build(self, config):
 		file_name = config['file.name']
