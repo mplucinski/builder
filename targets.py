@@ -48,6 +48,7 @@ class Target:
 			source_dir = self.extract(config, archive_file, config['directory.source'])
 		else:
 			source_dir = self.local_config['source_dir']
+		source_dir = config.helper.resolve_value(source_dir)
 		return source_dir
 
 	def download(self, config, url, target_dir, skip_if_exists=True):
