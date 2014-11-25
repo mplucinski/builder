@@ -153,14 +153,10 @@ class HeaderOnly(Target):
 class Autotools(Target):
 	def build(self, config):
 		source_dir = self.prepare_source(config)
-
-		stamp_file = os.path.join(source_dir, '.build-done')
-		if not os.path.exists(stamp_file):
-			self.configure(config, source_dir)
-			self.make(config, source_dir, ['install'])
-			open(stamp_file, 'w')
-		else:
-			logging.debug('{} is already built, skipping.'.format(self.name))
+		if config['skip']:
+			return
+		self.configure(config, source_dir)
+		self.make(config, source_dir, ['install'])
 
 	def configure(self, config, source_dir):
 		logging.info('Configuring {}...'.format(self.name))
