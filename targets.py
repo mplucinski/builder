@@ -16,6 +16,13 @@ class Target:
 		self.local_config = kwargs
 
 	def _build(self, config):
+		stamp_file = os.path.join(config['directory.root'], '.done-{}'.format(self.code))
+		if os.path.exists(stamp_file):
+			logging.info('Skipping build of {} (remove {} to force rebuild)'.format(self.name, stamp_file))
+			config.set('skip', True)
+		else:
+			config.set('skip', False)
+
 		if len(self.dependencies) > 0:
 			logging.info('Preparing dependencies for {}...'.format(self.name))
 			for i in self.dependencies:
@@ -27,6 +34,8 @@ class Target:
 		logging.info('Building {} for {}...'.format(self.name,  config['platform'].name))
 		self.build(config)
 		logging.info('Building {} for {} done.'.format(self.name, config['platform'].name))
+
+		open(stamp_file, 'w')
 
 	def build(self, config):
 		raise Exception('{} has no implementation of "build" method'.format(self))
@@ -68,19 +77,20 @@ class Target:
 		files_list = set(files_list)
 		extracted_dir = next(iter(files_list)) if len(files_list) == 1 else None
 		extracted_dir_path = os.path.join(target_dir, extracted_dir if extracted_dir else self.code)
-		if not(skip_if_exists and os.path.exists(extracted_dir_path)):
-			if not extracted_dir:
-				os.makedirs(extracted_dir_path, exist_ok=True)
-				target_dir = extracted_dir_path
-			logging.debug('Actual extraction in {}'.format(target_dir))
-			config.helper.execute(
-				['tar', 'xf', archive_file],
-				cwd=target_dir
-			)
-		else:
-			logging.debug('Output {} already exists, skipping extraction.'.format(extracted_dir_path))
+		if not config['skip']:
+			if not(skip_if_exists and os.path.exists(extracted_dir_path)):
+				if not extracted_dir:
+					os.makedirs(extracted_dir_path, exist_ok=True)
+					target_dir = extracted_dir_path
+				logging.debug('Actual extraction in {}'.format(target_dir))
+				config.helper.execute(
+					['tar', 'xf', archive_file],
+					cwd=target_dir
+				)
+			else:
+				logging.debug('Output {} already exists, skipping extraction.'.format(extracted_dir_path))
 
-		logging.debug('Extracting {} to {} done.'.format(archive_file, target_dir))
+			logging.debug('Extracting {} to {} done.'.format(archive_file, target_dir))
 		return extracted_dir_path
 
 	def make(self, config, directory, targets=[]):
