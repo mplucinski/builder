@@ -47,7 +47,7 @@ class Process:
 		flags = flags | os.O_NONBLOCK
 		fcntl.fcntl(fd, fcntl.F_SETFL, flags)
 
-	def __init__(self, args, cwd=None, env=None, capture_stdout=False, capture_stderr=False):
+	def __init__(self, args, cwd=None, env=None, stdin=False, capture_stdout=False, capture_stderr=False):
 		logging.debug('Running {}...'.format(args[0]))
 		logging.debug('Parameters: {}'.format(args))
 		logging.debug('Working directory: {}'.format(cwd))
@@ -65,7 +65,7 @@ class Process:
 		Process.set_nonblocking(master_stderr)
 
 		self.process = subprocess.Popen(args, bufsize=0, cwd=cwd, env=env,
-			stdout=slave_stdout, stderr=slave_stderr)
+			stdin=stdin, stdout=slave_stdout, stderr=slave_stderr)
 
 		self._reader_stdout = self.reader(master_stdout, capture_stdout,
 									self.buffer_stdout, sys.stdout.buffer)
