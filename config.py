@@ -70,46 +70,46 @@ class Config:
 class TestConfig(unittest.TestCase):
 	def test_single_config(self):
 		config = Config('single')
-		self.assertEqual(len(config), 0)
-		self.assertEqual(len(list(config)), 0)
+		self.assertEqual(0, len(config))
+		self.assertEqual(0, len(list(config)))
 
 		config['some.key'] = 'some value'
-		self.assertEqual(len(config), 1)
-		self.assertEqual(len(list(config)), 1)
-		self.assertEqual(config['some.key'], 'some value')
+		self.assertEqual(1, len(config))
+		self.assertEqual(1, len(list(config)))
+		self.assertEqual('some value', config['some.key'])
 
 	def test_inheit_config(self):
 		parent = Config('parent')
 		parent.config['travel'] = 'Car'
-		self.assertEqual(len(parent), 1)
-		self.assertEqual(len(list(parent)), 1)
-		self.assertEqual(parent['travel'], 'Car')
+		self.assertEqual(1, len(parent))
+		self.assertEqual(1, len(list(parent)))
+		self.assertEqual('Car', parent['travel'])
 
 		child = Config('child', parent=parent)
-		self.assertEqual(len(child), 1)
-		self.assertEqual(len(list(child)), 1)
-		self.assertEqual(child['travel'], 'Car')
+		self.assertEqual(1, len(child))
+		self.assertEqual(1, len(list(child)))
+		self.assertEqual('Car', child['travel'])
 
 		child['travel'] = 'Plane'
-		self.assertEqual(len(child), 1)
-		self.assertEqual(len(list(child)), 1)
-		self.assertEqual(child['travel'], 'Plane')
-		self.assertEqual(child['travel', 'parent'], 'Car')
+		self.assertEqual(1, len(child))
+		self.assertEqual(1, len(list(child)))
+		self.assertEqual('Plane', child['travel'])
+		self.assertEqual('Car', child['travel', 'parent'])
 
 		child['ticket'] = 100
-		self.assertEqual(len(child), 2)
-		self.assertEqual(len(list(child)), 2)
-		self.assertEqual(child['travel'], 'Plane')
-		self.assertEqual(child['ticket'], 100)
+		self.assertEqual(2, len(child))
+		self.assertEqual(2, len(list(child)))
+		self.assertEqual('Plane', child['travel'])
+		self.assertEqual(100, child['ticket'])
 
-		self.assertEqual(len(parent), 1)
-		self.assertEqual(len(list(parent)), 1)
-		self.assertEqual(parent['travel'], 'Car')
+		self.assertEqual(1, len(parent))
+		self.assertEqual(1, len(list(parent)))
+		self.assertEqual('Car', parent['travel'])
 
 		child['travel', 'parent'] = 'Ship'
-		self.assertEqual(len(parent), 1)
-		self.assertEqual(len(list(parent)), 1)
-		self.assertEqual(parent['travel'], 'Ship')
+		self.assertEqual(1, len(parent))
+		self.assertEqual(1, len(list(parent)))
+		self.assertEqual('Ship', parent['travel'])
 
 
 if __name__ == '__main__':
