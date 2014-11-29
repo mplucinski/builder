@@ -67,6 +67,10 @@ class Config:
 
 		return Iterator(self)
 
+class MockConfig(Config):
+	def __init__(self):
+		super().__init__('mocked_config')
+
 class TestConfig(unittest.TestCase):
 	def test_single_config(self):
 		config = Config('single')

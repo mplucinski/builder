@@ -8,8 +8,10 @@ import sys
 import unittest
 
 from .base import Profile
+from .base import Scope
 from .base import Target
 from .config import Config
+from . import targets
 
 def _init_logger(verbosity):
 	def verbosity_to_level(verbosity):
@@ -104,14 +106,10 @@ class TestBuilder(unittest.TestCase):
 		ben = MockTarget('Ben')
 		mary = MockTarget('Mary',
 			dependencies={ben},
-			config={
-				'travel': 'plane'
-			}
+			travel='plane'
 		)
 		susan = MockTarget('Susan',
-			config={
-				'travel': 'car'
-			}
+			travel='car'
 		)
 		joe = MockTarget('Joe',
 			dependencies={mary, susan}
@@ -119,22 +117,20 @@ class TestBuilder(unittest.TestCase):
 
 		build.targets |= {joe}
 		build()
-		self.assertEqual('ship', joe.config_on_build['travel'])
-		self.assertEqual('car', susan.config_on_build['travel'])
-		self.assertEqual('plane', mary.config_on_build['travel'])
-		self.assertEqual('plane', ben.config_on_build['travel'])
+		self.assertEqual('ship', joe.config_on_build['travel', Scope.Global])
+		self.assertEqual('car', susan.config_on_build['travel', Scope.Global])
+		self.assertEqual('plane', mary.config_on_build['travel', Scope.Global])
+		self.assertEqual('plane', ben.config_on_build['travel', Scope.Global])
 
 	def test_profiles(self):
 		build = Build({'travel': 'car'})
 		by_plane = MockProfile('by_plane', {'travel': 'plane'})
 		build.profiles |= {by_plane}
 		gary = MockTarget('Gary',
-			config={
-				'travel': 'ship'
-			}
+			travel='ship'
 		)
 		johnny = MockTarget('Johnny')
 		build.targets |= {gary, johnny}
 		build(args=('-p', 'by_plane'))
-		self.assertEqual('plane', johnny.config_on_build['travel'])
-		self.assertEqual('ship', gary.config_on_build['travel'])
+		self.assertEqual('plane', johnny.config_on_build['travel', Scope.Global])
+		self.assertEqual('ship', gary.config_on_build['travel', Scope.Global])
