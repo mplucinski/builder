@@ -310,16 +310,24 @@ _default_config=dict(
 )
 
 class Builder:
-	def __init__(self, source_dir, target_dir, **kwargs):
+	def __init__(self, **kwargs):
 		parser = argparse.ArgumentParser(description='Builder - Integration-centered build system')
 		parser.add_argument('-v', '--verbose', action='store_true',
 				help='Verbose output')
+		parser.add_argument('-c', '--config', action='append',
+				help='Override configuration value (in form name=value)')
 		args = parser.parse_args()
 
-		self.source_dir = os.path.normpath(source_dir)
-		self.target_dir = os.path.normpath(target_dir)
 		self.config = Config(config=_default_config).merged(kwargs)
-		self.config.set('verbose', args.verbose)
+
+		if args.config:
+			for i in args.config:
+				idx = i.find('=')
+				self.config[i[:idx]] = i[idx+1:]
+
+		self.config['directory.source'] = os.path.normpath(self.config['directory.source'])
+		self.config['directory.target'] = os.path.normpath(self.config['directory.target'])
+		self.config['verbose'] = args.verbose
 
 		self.platforms = []
 		self.targets = []
@@ -339,7 +347,7 @@ class Builder:
 		logging.info('Building {} for {}...'.format(target.name, config['platform'].name))
 
 		config = copy.deepcopy(config)
-		config.set('directory.root', os.path.join(self.target_dir, target.code, config['platform'].code))
+		config.set('directory.root', os.path.join(config['directory.target'], target.code, config['platform'].code))
 		logging.debug('Root build directory: {}'.format(config['directory.root']))
 
 		target._build(config)
