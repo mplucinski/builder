@@ -267,16 +267,14 @@ class Config:
 		_name = name.split('.')
 		current = self.config
 		while len(_name) > 0:
-			if _name[0] in current:
-				pass
-			elif len(_name) == 1: #leaf
-				current[_name[0]] = value
-			else:
-				current[_name[0]] = dict()
+			node = _name[0]
+			if len(_name) == 1: #leaf
+				current[node] = value
+			elif not node in current:
+				current[node] = dict()
 			current = current[_name[0]]
 			_name = _name[1:]
 
-		self.config[name] = value
 		if parent_scope:
 			self.parent.set(name, value)
 
