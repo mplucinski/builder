@@ -104,8 +104,3 @@ class TestBuilder(unittest.TestCase):
 		self.assertEqual(next(i_target).build_called, True)
 		self.assertEqual(next(i_target).build_called, True)
 		self.assertEqual(next(i_target).build_called, True)
-
-if __name__ == '__main__':
-	suite = unittest.defaultTestLoader.discover(start_dir='.', pattern='*.py')
-	runner = unittest.TextTestRunner(verbosity=2 if '-v' in sys.argv else 1)
-	runner.run(suite)
