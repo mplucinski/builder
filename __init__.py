@@ -215,6 +215,9 @@ class Config:
 		self.config = copy.deepcopy(config)
 		self.parent = parent
 
+	def __repr__(self):
+		return '<{} conifg={}>'.format(self.__class__, self.config)
+
 	@staticmethod
 	def _merged_dicts(d1, d2):
 		do = dict()
