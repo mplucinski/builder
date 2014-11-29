@@ -1,3 +1,8 @@
+import copy
+import types
+
+import builder
+
 class ConfigHelper:
 	def __init__(self, config):
 		self.config = config
@@ -12,7 +17,7 @@ class ConfigHelper:
 			_env.update(env)
 
 		kwargs['env'] = _env
-		return Process(*args, **kwargs).communicate()
+		return builder.Process(*args, **kwargs).communicate()
 
 	def c_cxx_detect_compiler(self, lang):
 		return self.detect_compiler(self.config['{}.compiler'.format(lang)])
