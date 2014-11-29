@@ -8,20 +8,82 @@ import subprocess
 import urllib.parse
 import urllib.request
 
+class Visibility:
+	Local       = 1 << 0  # visible for the target itself
+	Descendants = 1 << 1  # visible for target's dependencies
+	Ascendants  = 1 << 2  # visible for target's ascendants
+	Global      = Local | Descendants | Ascendants
+
+class Relationship:
+	Local = 1
+	Global = 2
+
+class _TargetConfig:
+	def __init__(self, target, config):
+		self.name = 'target.{}'.format(target.code)
+		self.config = config.merged(self.name, { self.name+'.'+k: v for k, v in target.config.items()})
+		self.target = target
+
+	@staticmethod
+	def _arg_key(key):
+		pass
+
+	def get(self, key, association):
+		pass
+
+	def __getitem__(self, key):
+		return self.get(**self._arg_key(key))
+
+	def __setitem__(self, key, value):
+		self.set(value=value, **self._arg_key(key))
+
+#	def _key(self, key, scope):
+#		return self.name+'.'+key if scope == Scope.Global else key
+#
+#	def _get(self, key, scope):
+#		return self.config[self._key(key, scope)]
+#
+#	def _set(self, key, value, local):
+#		self.config[self._key(key, scope), 'target'] = value
+#
+#	@staticmethod
+#	def _arg_key(key, local_default):
+#		if isinstance(key, tuple):
+#			return key
+#		return key, local_default
+#
+#	# difference between key processing in __getitem__ and __setitem__ is in purpose
+#	# rationale: when target gets a value, it usually needs global one.
+#	# But when sets, it almost always wants to set it's local value
+#	def __getitem__(self, key):
+#		key, local = self._arg_key(key, False)
+#		return self._get(key, local)
+#
+#	def __setitem__(self, key, value):
+#		key, local = self._arg_key(key, True)
+#		self._set(key, value, local)
+
+	def __str__(self):
+		output  = 'Local configuration for target {}\n'.format(self.target.name)
+		output += str(self.config)
+		return output
+
 class Target:
 	def __init__(self, name, dependencies=[], *args, **kwargs):
 		self.name = name
-		self.code = name.lower().replace(' ','_')
+		self.code = name.lower().replace(' ','_').replace('.', '_')
 		self.dependencies = dependencies
-		self.local_config = kwargs
+		self.config = kwargs
 
 	def _build(self, config):
-		stamp_file = os.path.join(config['directory.root'], '.done-{}'.format(self.code))
+		config = _TargetConfig(self, config)
+
+		stamp_file = os.path.join(config['directory.root'](), '.done-{}'.format(self.code))
 		if os.path.exists(stamp_file):
 			logging.info('Skipping build of {} (remove {} to force rebuild)'.format(self.name, stamp_file))
-			config.set('skip', True)
+			config['skip'] = True
 		else:
-			config.set('skip', False)
+			config['skip'] = False
 
 		if len(self.dependencies) > 0:
 			logging.info('Preparing dependencies for {}...'.format(self.name))
@@ -29,11 +91,9 @@ class Target:
 				i._build(config)
 			logging.info('Preparing dependencies for {} done.'.format(self.name))
 
-		config = config.merged(self.local_config)
-
-		logging.info('Building {} for {}...'.format(self.name,  config['platform'].name))
+		logging.info('Building {} for {}...'.format(self.name,  config['platform']().name))
 		self.build(config)
-		logging.info('Building {} for {} done.'.format(self.name, config['platform'].name))
+		logging.info('Building {} for {} done.'.format(self.name, config['platform']().name))
 
 		open(stamp_file, 'w')
 
@@ -42,10 +102,11 @@ class Target:
 
 	def prepare_source(self, config):
 		if not 'source_dir' in self.local_config:
+			print(config)
 			archive_file = self.local_config.get('archive_file',
-					self.download(config, self.local_config['url'], config['directory.archive'])
+					self.download(config, self.local_config['url'], config['directory.archive']())
 			)
-			source_dir = self.extract(config, archive_file, config['directory.source'])
+			source_dir = self.extract(config, archive_file, config['directory.source']())
 		else:
 			source_dir = self.local_config['source_dir']
 		source_dir = config.helper.resolve_value(source_dir)
@@ -97,7 +158,8 @@ class Target:
 	def make(self, config, directory, targets=[]):
 		logging.debug('Making {}...'.format(self.name))
 		config.helper.execute(
-			['make', '-j{}'.format(os.cpu_count())]+targets,
+			#['make', '-j{}'.format(os.cpu_count())]+targets,
+			['make']+targets,
 			cwd=directory#, stdout=subprocess.PIPE, stderr=subprocess.PIPE
 		)
 		logging.debug('Making {} done.'.format(self.name))
@@ -132,7 +194,7 @@ class CreateFile(Target):
 class ExtractOnly(Target):
 	def build(self, config):
 		source_dir = self.prepare_source(config)
-		config.set('target.{}.source_dir'.format(self.code), source_dir, parent_scope=True)
+		config.set('target.{}.source_dir'.format(self.code), source_dir, 'target')
 
 class HeaderOnly(Target):
 	def build(self, config):
