@@ -36,6 +36,7 @@ def _init_logger(verbosity):
 class Target:
 	def __init__(self, name, dependencies=None, config=None):
 		self.name = name
+		self.code = name.replace(' ', '_').replace('.', '_')
 		self.dependencies = dependencies if dependencies is not None else set()
 		self.config = config if config is not None else dict()
 
@@ -43,6 +44,8 @@ class Target:
 		logging.log(level, '{}: {}'.format(self.name, message))
 
 	def _build(self, config):
+		config = Config('target.{}'.format(self.code), self.config, config)
+
 		self.log(logging.INFO, 'processing dependencies...')
 		for dependency in self.dependencies:
 			dependency._build(config)
