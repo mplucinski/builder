@@ -126,7 +126,7 @@ class TestBuilder(unittest.TestCase):
 		)
 
 		build.targets |= {joe}
-		build(args=['-v'])
+		build()
 		self.assertEqual('ship', joe.config_on_build['travel'])
 		self.assertEqual('car', susan.config_on_build['travel'])
 		self.assertEqual('plane', mary.config_on_build['travel'])
