@@ -70,6 +70,41 @@ class Build:
 		for target in targets:
 			target._build()
 
+
+class MockTarget(Target):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.build_called = False
+
+	def build(self):
+		self.build_called = True
+
+class TestBuilder(unittest.TestCase):
+	def build(self, targets={'foo', 'bar', 'baz', 'qux'}, dependencies={'foo': ['bar', 'baz'], 'baz': ['qux']}, args=None):
+		build = Build()
+		targets = { i: MockTarget(i) for i in targets }
+		for name, target in targets.items():
+			target.dependencies = { targets[dep] for dep in dependencies[name] } if name in dependencies else {}
+		targets = set(targets.values())
+		build.targets |= targets
+		build(args=args)
+		return build, targets
+
+	def test_single_target(self):
+		build, targets = self.build(targets={'foo'}, dependencies={})
+		targets = iter(targets)
+		self.assertEqual(next(targets).build_called, True)
+
+	def test_dependencies(self):
+		build, targets = self.build(targets={'foo', 'bar', 'baz', 'qux'},
+			dependencies={'foo': ['bar', 'baz'], 'baz': ['qux']}
+		)
+		i_target = iter(targets)
+		self.assertEqual(next(i_target).build_called, True)
+		self.assertEqual(next(i_target).build_called, True)
+		self.assertEqual(next(i_target).build_called, True)
+		self.assertEqual(next(i_target).build_called, True)
+
 if __name__ == '__main__':
 	suite = unittest.defaultTestLoader.discover(start_dir='.', pattern='*.py')
 	runner = unittest.TextTestRunner(verbosity=2 if '-v' in sys.argv else 1)
