@@ -33,10 +33,19 @@ def _init_logger(verbosity):
 	logging.getLogger().addHandler(handler)
 	logging.debug('Logger configured')
 
+def _code_from_name(name):
+	return name.replace(' ', '_').replace('.', '_')
+
+class Profile:
+	def __init__(self, name, config=None):
+		self.name = name
+		self.code = _code_from_name(name)
+		self.config = config if config is not None else dict()
+
 class Target:
 	def __init__(self, name, dependencies=None, config=None):
 		self.name = name
-		self.code = name.replace(' ', '_').replace('.', '_')
+		self.code = _code_from_name(name)
 		self.dependencies = dependencies if dependencies is not None else set()
 		self.config = config if config is not None else dict()
 
@@ -60,12 +69,15 @@ class Build:
 		parser = argparse.ArgumentParser(description='Builder - Integration-centered build system')
 		parser.add_argument('-v', '--verbose', action='count', default=0,
 				help='Verbose output')
+		parser.add_argument('-p', '--profile', action='store', default='default',
+				help='Select build profile')
 		parser.add_argument('target', nargs='*', type=str, metavar='TARGET',
 				help='Target(s) to build (all, if nothing passed)')
 		return parser
 
 	def __init__(self, config=None):
 		self.config = config if config is not None else dict()
+		self.profiles = {Profile('default')}
 		self.targets = set()
 
 	def __call__(self, args=None):
@@ -73,6 +85,12 @@ class Build:
 		args = parser.parse_args(args)
 
 		config = Config('main', self.config)
+
+		try:
+			profile = next(i for i in self.profiles if i.name == args.profile)
+			config = Config('profile.{}'.format(profile.code), profile.config, config)
+		except StopIteration as e:
+			raise Exception('Profile not found: {}'.format(args.profile)) from e
 
 		_init_logger(args.verbose)
 
@@ -98,6 +116,9 @@ class MockTarget(Target):
 	def build(self, config):
 		self.build_called = True
 		self.config_on_build = copy.deepcopy(config)
+
+class MockProfile(Profile):
+	pass
 
 class TestBuilder(unittest.TestCase):
 	def test_single_target(self):
@@ -131,3 +152,18 @@ class TestBuilder(unittest.TestCase):
 		self.assertEqual('car', susan.config_on_build['travel'])
 		self.assertEqual('plane', mary.config_on_build['travel'])
 		self.assertEqual('plane', ben.config_on_build['travel'])
+
+	def test_profiles(self):
+		build = Build({'travel': 'car'})
+		by_plane = MockProfile('by_plane', {'travel': 'plane'})
+		build.profiles |= {by_plane}
+		gary = MockTarget('Gary',
+			config={
+				'travel': 'ship'
+			}
+		)
+		johnny = MockTarget('Johnny')
+		build.targets |= {gary, johnny}
+		build(args=('-p', 'by_plane', '-v'))
+		self.assertEqual('plane', johnny.config_on_build['travel'])
+		self.assertEqual('ship', gary.config_on_build['travel'])
