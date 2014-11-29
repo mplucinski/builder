@@ -104,7 +104,6 @@ class Config:
 		self.parent = parent
 
 	def __repr__(self):
-		return '<{} conifg={}>'.format(self.__class__, self.config)
 
 	@staticmethod
 	def _merged_dicts(d1, d2):
@@ -167,4 +166,4 @@ class Config:
 			_name = _name[1:]
 
 		if parent_scope:
-			self.parent.set(name, value)
+			self.parent.set(name, value)		return '<{} config={}>'.format(self.__class__, self.config)
