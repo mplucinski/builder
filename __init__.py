@@ -263,6 +263,9 @@ class Config:
 				return default
 		return self.helper.resolve_value(current)
 
+	def __setitem__(self, name, value):
+		self.set(name, value)
+
 	def set(self, name, value, parent_scope=False):
 		_name = name.split('.')
 		current = self.config
