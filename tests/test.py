@@ -18,11 +18,11 @@ class MockTarget(builder.Target):
 		self.build_called = True
 
 class TestBuilder(unittest.TestCase):
-	def build(self, targets=set()):
+	def build(self, targets=set(), args=None):
 		build = builder.Build()
 		targets = { MockTarget(i) for i in targets }
 		build.targets |= targets
-		build()
+		build(args=args)
 		return build, targets
 
 	def test_single_target(self):
