@@ -40,7 +40,7 @@ class Target:
 class Build:
 	def _arguments_parser(self):
 		parser = argparse.ArgumentParser(description='Builder - Integration-centered build system')
-		parser.add_argument('-v', '--verbose', action='count',
+		parser.add_argument('-v', '--verbose', action='count', default=0,
 				help='Verbose output')
 		parser.add_argument('target', nargs='*', type=str, metavar='TARGET',
 				help='Target(s) to build (all, if nothing passed)')
