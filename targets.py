@@ -122,7 +122,7 @@ class CreateFile(Target):
 	def build(self, config):
 		file_name = config['file.name']
 		logging.debug('Creating file: {}'.format(file_name))
-		directory = os.path.split(file_name)[1]
+		directory = os.path.split(file_name)[0]
 		if directory:
 			os.makedirs(directory, exist_ok=True)
 		with open(config['file.name'], 'w') as f:
