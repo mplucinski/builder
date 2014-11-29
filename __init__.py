@@ -32,6 +32,7 @@ def _init_logger(verbosity):
 class Target:
 	def __init__(self, name):
 		self.name = name
+		self.dependencies = set()
 
 	def _build(self):
 		self.build()

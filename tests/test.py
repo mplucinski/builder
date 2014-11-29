@@ -18,17 +18,30 @@ class MockTarget(builder.Target):
 		self.build_called = True
 
 class TestBuilder(unittest.TestCase):
-	def build(self, targets=set(), args=None):
+	def build(self, targets={'foo', 'bar', 'baz', 'qux'}, dependencies={'foo': ['bar', 'baz'], 'baz': ['qux']}, args=None):
 		build = builder.Build()
-		targets = { MockTarget(i) for i in targets }
+		targets = { i: MockTarget(i) for i in targets }
+		for name, target in targets.items():
+			target.dependencies = { targets[dep] for dep in dependencies[name] } if name in dependencies else {}
+		targets = set(targets.values())
 		build.targets |= targets
-		build(args=args)
+		build(args=['-vv'])
 		return build, targets
 
 	def test_single_target(self):
-		build, targets = self.build(targets={'foo'})
+		build, targets = self.build(targets={'foo'}, dependencies={})
 		targets = iter(targets)
 		self.assertEqual(next(targets).build_called, True)
+
+	def test_dependencies(self):
+		build, targets = self.build(targets={'foo', 'bar', 'baz', 'qux'},
+			dependencies={'foo': ['bar', 'baz'], 'baz': ['qux']}
+		)
+		i_target = iter(targets)
+		self.assertEqual(next(i_target).build_called, True)
+		self.assertEqual(next(i_target).build_called, True)
+		self.assertEqual(next(i_target).build_called, True)
+		self.assertEqual(next(i_target).build_called, True)
 
 if __name__ == '__main__':
 	unittest.main()
