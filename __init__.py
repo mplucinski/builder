@@ -281,6 +281,14 @@ class Config:
 		if parent_scope:
 			self.parent.set(name, value)
 
+class Profile:
+	def __init__(self, name, config=dict()):
+		self.name = name
+		self.config = config
+
+	def __str__(self):
+		return self.name
+
 _default_c_cxx_warnings=dict(
 	errors=False, #treat warnings as errors
 	enable=dict(
@@ -309,6 +317,10 @@ _default_config=dict(
 	)
 )
 
+_default_profile=Profile(
+	name='default'
+)
+
 class Builder:
 	def __init__(self, **kwargs):
 		parser = argparse.ArgumentParser(description='Builder - Integration-centered build system')
@@ -316,6 +328,8 @@ class Builder:
 				help='Verbose output')
 		parser.add_argument('-c', '--config', action='append',
 				help='Override configuration value (in form name=value)')
+		parser.add_argument('-p', '--profile', action='store', default='default',
+				help='Select build profile')
 		args = parser.parse_args()
 
 		self.config = Config(config=_default_config).merged(kwargs)
@@ -325,19 +339,24 @@ class Builder:
 				idx = i.find('=')
 				self.config[i[:idx]] = i[idx+1:]
 
-		self.config['directory.source'] = os.path.normpath(self.config['directory.source'])
-		self.config['directory.target'] = os.path.normpath(self.config['directory.target'])
+		self.config['directory.source']
+		self.config['directory.target']
 		self.config['verbose'] = args.verbose
+		self.config['profile'] = args.profile
 
 		self.platforms = []
+		self.profiles = [_default_profile]
 		self.targets = []
 		_init_logger(logging.DEBUG if self.config['verbose'] else logging.INFO)
 
 	def __call__(self, args=sys.argv):
-		logging.info('Building...')
+		self.config['profile'] = next(i for i in self.profiles if i.name == self.config['profile'])
+
+		logging.info('Building (profile {})...'.format(self.config['profile']))
 		for platform in self.platforms:
-			config = copy.deepcopy(self.config)
-			config.set('platform', platform)
+			config = self.config.merged(self.config['profile'].config)
+			print(repr(config))
+			config['platform'] = platform
 			for target in self.targets:
 				self.build(target, config)
 
@@ -347,7 +366,7 @@ class Builder:
 		logging.info('Building {} for {}...'.format(target.name, config['platform'].name))
 
 		config = copy.deepcopy(config)
-		config.set('directory.root', os.path.join(config['directory.target'], target.code, config['platform'].code))
+		config['directory.root'] = os.path.join(config['directory.target'], target.code, config['platform'].code)
 		logging.debug('Root build directory: {}'.format(config['directory.root']))
 
 		target._build(config)
