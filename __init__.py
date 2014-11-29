@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import copy
 import logging
 import sys
 import unittest
 
-from . import config
+from .config import Config
 
 def _init_logger(verbosity):
 	def verbosity_to_level(verbosity):
@@ -33,12 +34,23 @@ def _init_logger(verbosity):
 	logging.debug('Logger configured')
 
 class Target:
-	def __init__(self, name):
+	def __init__(self, name, dependencies=None, config=None):
 		self.name = name
-		self.dependencies = set()
+		self.dependencies = dependencies if dependencies is not None else set()
+		self.config = config if config is not None else dict()
 
-	def _build(self):
-		self.build()
+	def log(self, level, message):
+		logging.log(level, '{}: {}'.format(self.name, message))
+
+	def _build(self, config):
+		self.log(logging.INFO, 'processing dependencies...')
+		for dependency in self.dependencies:
+			dependency._build(config)
+		self.log(logging.INFO, 'dependencies ready.')
+
+		self.log(logging.INFO, 'building...')
+		self.build(config)
+		self.log(logging.INFO, 'built.')
 
 class Build:
 	def _arguments_parser(self):
@@ -49,12 +61,15 @@ class Build:
 				help='Target(s) to build (all, if nothing passed)')
 		return parser
 
-	def __init__(self):
+	def __init__(self, config=None):
+		self.config = config if config is not None else dict()
 		self.targets = set()
 
 	def __call__(self, args=None):
 		parser = self._arguments_parser()
 		args = parser.parse_args(args)
+
+		config = Config('main', self.config)
 
 		_init_logger(args.verbose)
 
@@ -68,16 +83,18 @@ class Build:
 					raise Exception('Global target "{}" not found'.format(i)) from e
 
 		for target in targets:
-			target._build()
+			target._build(config)
 
 
 class MockTarget(Target):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.build_called = False
+		self.config_on_build = None
 
-	def build(self):
+	def build(self, config):
 		self.build_called = True
+		self.config_on_build = copy.deepcopy(config)
 
 class TestBuilder(unittest.TestCase):
 	def test_single_target(self):
@@ -86,3 +103,28 @@ class TestBuilder(unittest.TestCase):
 		build.targets |= {foo}
 		build()
 		self.assertEqual(True, foo.build_called)
+
+	def test_main_config(self):
+		build = Build({'travel': 'ship'})
+		ben = MockTarget('Ben')
+		mary = MockTarget('Mary',
+			dependencies={ben},
+			config={
+				'travel': 'plane'
+			}
+		)
+		susan = MockTarget('Susan',
+			config={
+				'travel': 'car'
+			}
+		)
+		joe = MockTarget('Joe',
+			dependencies={mary, susan}
+		)
+
+		build.targets |= {joe}
+		build(args=['-v'])
+		self.assertEqual('ship', joe.config_on_build['travel'])
+		self.assertEqual('car', susan.config_on_build['travel'])
+		self.assertEqual('plane', mary.config_on_build['travel'])
+		self.assertEqual('plane', ben.config_on_build['travel'])
