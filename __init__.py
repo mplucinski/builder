@@ -4,6 +4,9 @@
 import argparse
 import logging
 import sys
+import unittest
+
+import config
 
 def _init_logger(verbosity):
 	def verbosity_to_level(verbosity):
@@ -66,3 +69,8 @@ class Build:
 
 		for target in targets:
 			target._build()
+
+if __name__ == '__main__':
+	suite = unittest.defaultTestLoader.discover(start_dir='.', pattern='*.py')
+	runner = unittest.TextTestRunner(verbosity=2 if '-v' in sys.argv else 1)
+	runner.run(suite)

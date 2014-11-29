@@ -111,6 +111,10 @@ class TestConfig(unittest.TestCase):
 		self.assertEqual(1, len(list(parent)))
 		self.assertEqual('Ship', parent['travel'])
 
+def load_tests(loader, tests, pattern):
+	suite = unittest.TestSuite()
+	suite.addTests(loader.loadTestsFromTestCase(TestConfig))
+	return suite
 
 if __name__ == '__main__':
 	unittest.main()
