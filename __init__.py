@@ -6,7 +6,7 @@ import logging
 import sys
 import unittest
 
-import config
+from . import config
 
 def _init_logger(verbosity):
 	def verbosity_to_level(verbosity):
