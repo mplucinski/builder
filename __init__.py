@@ -14,6 +14,10 @@ import threading
 import time
 import types
 
+import builder.config
+import builder.platforms
+import builder.targets
+
 def directory_of_file(file_name):
 	return os.path.split(os.path.realpath(file_name))[0]
 import copy
@@ -166,7 +170,7 @@ class Builder:
 				help='Select build profile')
 		args = parser.parse_args()
 
-		self.config = Config(config=_default_config).merged(kwargs)
+		self.config = builder.config.Config(config=_default_config).merged(kwargs)
 
 		if args.config:
 			for i in args.config:
@@ -206,6 +210,3 @@ class Builder:
 		target._build(config)
 
 		logging.info('Building {} for {} done.'.format(target.name, config['platform'].name))
-
-import builder.platforms
-import builder.targets
