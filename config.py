@@ -9,16 +9,33 @@ class Config:
 		self.config = config if config is not None else dict()
 		self.parent = parent
 
-	def __getitem__(self, name):
+	@staticmethod
+	def _arg_key(key):
+		if isinstance(key, tuple):
+			return dict(key=key[0], level=key[1])
+		return dict(key=key, level=None)
+
+	def get(self, key, level=None):
 		try:
-			return self.config[name]
+			if level is not None and self.name != level:
+				raise KeyError(key)
+			return self.config[key]
 		except KeyError:
 			if self.parent is None:
 				raise
-			return self.parent[name]
+			return self.parent.get(key)
 
-	def __setitem__(self, name, value):
-		self.config[name] = value
+	def set(self, key, value, level=None):
+		if level is not None and self.name != level:
+			self.parent.set(key, value, level)
+		else:
+			self.config[key] = value
+
+	def __getitem__(self, key):
+		return self.get(**self._arg_key(key))
+
+	def __setitem__(self, key, value):
+		self.set(value=value, **self._arg_key(key))
 
 	def __len__(self):
 		parent_keys = set(self.parent.config.keys()) if self.parent is not None else set()
@@ -77,6 +94,7 @@ class TestConfig(unittest.TestCase):
 		self.assertEqual(len(child), 1)
 		self.assertEqual(len(list(child)), 1)
 		self.assertEqual(child['travel'], 'Plane')
+		self.assertEqual(child['travel', 'parent'], 'Car')
 
 		child['ticket'] = 100
 		self.assertEqual(len(child), 2)
@@ -87,6 +105,12 @@ class TestConfig(unittest.TestCase):
 		self.assertEqual(len(parent), 1)
 		self.assertEqual(len(list(parent)), 1)
 		self.assertEqual(parent['travel'], 'Car')
+
+		child['travel', 'parent'] = 'Ship'
+		self.assertEqual(len(parent), 1)
+		self.assertEqual(len(list(parent)), 1)
+		self.assertEqual(parent['travel'], 'Ship')
+
 
 if __name__ == '__main__':
 	unittest.main()
