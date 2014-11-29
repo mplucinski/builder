@@ -122,6 +122,9 @@ class CreateFile(Target):
 	def build(self, config):
 		file_name = config['file.name']
 		logging.debug('Creating file: {}'.format(file_name))
+		directory = os.path.split(file_name)[1]
+		if directory:
+			os.makedirs(directory, exist_ok=True)
 		with open(config['file.name'], 'w') as f:
 			f.write(config['file.content'])
 		os.chmod(file_name, config['file.mode'])
