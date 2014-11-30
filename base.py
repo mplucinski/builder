@@ -79,6 +79,7 @@ class Target:
 	GlobalTargetLevel = 'target'
 
 	local_config_keys = set()
+	local_config_defaults = dict()
 
 	def _local_config_key(self, key):
 		return 'target.{}.{}'.format(self.code, key)
@@ -89,6 +90,7 @@ class Target:
 		self.dependencies = dependencies if dependencies is not None else set()
 		self.config = { k: v for k, v in kwargs.items() if k not in self.local_config_keys }
 		self.config.update({ self._local_config_key(k): v for k, v in kwargs.items() if k in self.local_config_keys })
+		self.config.update({ self._local_config_key(k): v for k, v in self.local_config_defaults.items() if k not in kwargs  })
 
 	def log(self, level, message):
 		logging.log(level, '{}: {}'.format(self.name, message))
