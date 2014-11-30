@@ -41,21 +41,24 @@ class Config:
 	def _get_subelements(self, key):
 		return { k for k in self.config if k.startswith(key+'.') }
 
-	def get_single(self, key, level=None, resolve=False):
+	def get_single(self, key, top_config=None, level=None, resolve=False):
+		assert top_config is not None
 		try:
 			if level is not None and self.name != level:
 				raise KeyError(key)
 			value = self.config[key]
-			if callable(value):
-				value = value(self)
+			if callable(value) and resolve:
+				value = value(top_config)
 			return value
 		except KeyError:
 			if self.parent is None:
 				raise
-			return self.parent.get(key)
+			return self.parent.get(key, top_config=top_config, level=level, resolve=resolve)
 
 	def get(self, key, *args, **kwargs):
 		try:
+			if 'top_config' not in kwargs:
+				kwargs['top_config'] = self
 			return self.get_single(key, *args, **kwargs)
 		except KeyError:
 			prefix = key+'.'
@@ -78,7 +81,7 @@ class Config:
 			self.config.update(add)
 
 	def __getitem__(self, key):
-		return self.get(resolve=True, **self._arg_key(key))
+		return self.get(resolve=True, top_config=self, **self._arg_key(key))
 
 	def __setitem__(self, key, value):
 		self.set(value=value, **self._arg_key(key))

@@ -4,6 +4,7 @@
 import argparse
 import copy
 import logging
+import pathlib
 import sys
 import unittest
 
@@ -38,6 +39,12 @@ def _init_logger(verbosity):
 	logging.debug('Logger configured')
 
 class Build:
+	_default_config = {
+		'directory': {
+			'source': lambda config: str(pathlib.Path(config['directory.root'])/'src')
+		}
+	}
+
 	def _arguments_parser(self):
 		parser = argparse.ArgumentParser(description='Builder - Integration-centered build system')
 		parser.add_argument('-v', '--verbose', action='count', default=0,
@@ -57,13 +64,19 @@ class Build:
 		parser = self._arguments_parser()
 		args = parser.parse_args(args)
 
-		config = Config('main', self.config)
+		config = Config('default', self._default_config)
+		config = Config('main', self.config, config)
 
 		try:
 			profile = next(i for i in self.profiles if i.name == args.profile)
 			config = Config('profile.{}'.format(profile.code), profile.config, config)
 		except StopIteration as e:
 			raise Exception('Profile not found: {}'.format(args.profile)) from e
+
+		if 'directory.root' not in config:
+			raise Exception('Option "directory.root" does not exist')
+
+		config['directory.root'] = str(pathlib.Path(config['directory.root'])/profile.code)
 
 		_init_logger(args.verbose)
 
@@ -91,19 +104,31 @@ class MockTarget(Target):
 		self.build_called = True
 		self.config_on_build = copy.deepcopy(config)
 
+class MockBuild(Build):
+	def __init__(self, config=None):
+		config = config if config is not None else dict()
+
+		if not 'directory' in config:
+			config['directory'] = dict()
+
+		if not 'root' in config['directory']:
+			config['directory']['root'] = 'ROOT_DIRECTORY'
+
+		super().__init__(config)
+
 class MockProfile(Profile):
 	pass
 
 class TestBuilder(unittest.TestCase):
 	def test_single_target(self):
-		build = Build()
+		build = MockBuild()
 		foo = MockTarget('foo')
 		build.targets |= {foo}
 		build()
 		self.assertEqual(True, foo.build_called)
 
 	def test_main_config(self):
-		build = Build({'travel': 'ship'})
+		build = MockBuild({'travel': 'ship'})
 		ben = MockTarget('Ben')
 		mary = MockTarget('Mary',
 			dependencies={ben},
@@ -124,7 +149,7 @@ class TestBuilder(unittest.TestCase):
 		self.assertEqual('plane', ben.config_on_build['travel', Scope.Global])
 
 	def test_profiles(self):
-		build = Build({'travel': 'car'})
+		build = MockBuild({'travel': 'car'})
 		by_plane = MockProfile('by_plane', {'travel': 'plane'})
 		build.profiles |= {by_plane}
 		gary = MockTarget('Gary',
@@ -135,3 +160,17 @@ class TestBuilder(unittest.TestCase):
 		build(args=('-p', 'by_plane'))
 		self.assertEqual('plane', johnny.config_on_build['travel', Scope.Global])
 		self.assertEqual('ship', gary.config_on_build['travel', Scope.Global])
+
+	def test_defaults(self):
+		build = MockBuild({
+			'directory': {
+				'root': 'ROOT_DIRECTORY'
+			}
+		})
+		target = MockTarget('some_target')
+		build.targets |= {target}
+		build()
+		self.assertEqual({
+			'directory.root': 'ROOT_DIRECTORY/default',
+			'directory.source': 'ROOT_DIRECTORY/default/src',
+		}, target.config_on_build.items())
