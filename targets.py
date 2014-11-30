@@ -114,7 +114,7 @@ class TestDownload(unittest.TestCase):
 		})
 		download._build(config)
 
-		self.assertTrue(str(config['file.output']).endswith(example_file.name))
+		self.assertTrue(str(config['target.download_plane.file.output']).endswith(example_file.name))
 		target_dir.cleanup()
 
 class TestExtract(unittest.TestCase):
