@@ -71,8 +71,9 @@ class Config:
 		return Iterator(self)
 
 class MockConfig(Config):
-	def __init__(self):
-		super().__init__('mocked_config')
+	def __init__(self, name=None, config=None):
+		name = name if name is not None else 'mocked_config'
+		super().__init__(name, config=config)
 
 class TestConfig(unittest.TestCase):
 	def test_single_config(self):

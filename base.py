@@ -44,8 +44,20 @@ class TargetConfig:
 
 		return self.config.get(key, level, resolve=resolve)
 
+	def set(self, key, value, scope=Scope.Local, level=None):
+		if scope == Scope.Local:
+			key = self.target._local_config_key(key)
+		elif scope == Scope.Global:
+			pass
+		elif scope == Scope.Auto:
+			raise Exception('set() operation does not support Scope.Auto')
+		self.config.set(key=key, value=value, level=level)
+
 	def __getitem__(self, key):
 		return self.get(resolve=True, **self._arg_key(key))
+
+	def __setitem__(self, key, value):
+		self.set(value=value, **self._arg_key(key))
 
 class Target:
 	local_config_keys = set()
