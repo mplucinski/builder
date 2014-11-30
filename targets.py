@@ -20,8 +20,6 @@ class Download(Target):
 	local_config_keys = {'url'}
 
 	def build(self, config):
-		logging.info('Downloading {}'.format(config))
-
 		file_path = urllib.parse.urlparse(config['url']).path
 		file_name = pathlib.Path(file_path).name
 
