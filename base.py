@@ -59,6 +59,9 @@ class TargetConfig:
 	def __setitem__(self, key, value):
 		self.set(value=value, **self._arg_key(key))
 
+	def __iter__(self):
+		return iter(self.config)
+
 class Target:
 	GlobalTargetLevel = 'target'
 
