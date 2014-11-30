@@ -66,18 +66,20 @@ class Patch(Target):
 		patch.communicate()
 
 class Create(Target):
-	local_config_keys = {'file_name', 'kind', 'content'}
-	local_config_defaults = {'kind': 'file', 'content': None}
+	local_config_keys = {'file.name', 'file.kind', 'file.content', 'file.mode'}
+	local_config_defaults = {'file.kind': 'file', 'file.content': None, 'file.mode': None}
 
 	def build(self, config):
-		file_name = pathlib.Path(config['file_name'])
-		kind = config['kind']
+		file_name = pathlib.Path(config['file.name'])
+		kind = config['file.kind']
 		if kind == 'file':
-			file_name.open('w').write(config['content'])
+			file_name.open('w').write(config['file.content'])
 		elif kind == 'directory':
 			file_name.mkdir(parents=True)
 		else:
 			raise Exception('Unsupported target kind: {}'.format(kind))
+		if config['file.mode']:
+			file_name.chmod(config['file.mode'])
 
 class TestDownload(unittest.TestCase):
 	def test_download(self):
@@ -198,8 +200,10 @@ growth in the GNP of over 4%."'''
 		file_name = temp/self.file_name
 
 		create = Create('create_file',
-			file_name=file_name,
-			content=self.content
+			file={
+				'name': file_name,
+				'content': self.content
+			}
 		)
 		config = MockConfig(Target.GlobalTargetLevel)
 		create._build(config)
@@ -214,8 +218,10 @@ growth in the GNP of over 4%."'''
 		directory_name = temp/self.directory_name
 
 		create = Create('create_file',
-			file_name=directory_name,
-			kind='directory'
+			file={
+				'name': directory_name,
+				'kind': 'directory'
+			}
 		)
 		config = MockConfig(Target.GlobalTargetLevel)
 		create._build(config)
