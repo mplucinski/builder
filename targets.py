@@ -32,7 +32,7 @@ class Download(Target):
 
 		target_file = target_dir/file_name
 
-		self.log(logging.INFO, 'downloading {}...'.format(config['url']))
+		self.log(logging.INFO, 'downloading {} to {}...'.format(config['url'], str(target_dir)))
 		urllib.request.urlretrieve(config['url'], str(target_file))
 
 		config['file.output', Scope.Global, Target.GlobalTargetLevel] = target_file
