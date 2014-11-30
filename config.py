@@ -32,7 +32,10 @@ class Config:
 			self.config[key] = value
 
 	def __getitem__(self, key):
-		return self.get(**self._arg_key(key))
+		value = self.get(**self._arg_key(key))
+		if callable(value):
+			value = value(self)
+		return value
 
 	def __setitem__(self, key, value):
 		self.set(value=value, **self._arg_key(key))
@@ -114,6 +117,13 @@ class TestConfig(unittest.TestCase):
 		self.assertEqual(1, len(parent))
 		self.assertEqual(1, len(list(parent)))
 		self.assertEqual('Ship', parent['travel'])
+
+	def test_callable(self):
+		config = Config('cfg')
+		config['foo'] = 'bar'
+		config['baz'] = lambda config: config['foo']+' yea'
+		self.assertEqual('bar', config['foo'])
+		self.assertEqual('bar yea', config['baz'])
 
 def load_tests(loader, tests, pattern):
 	suite = unittest.TestSuite()
