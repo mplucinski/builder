@@ -153,8 +153,6 @@ YODA: You will know.  When your code you try to read six months
       from now.'''
 
 	def test_patch(self):
-#		logging.basicCo
-
 		temp_dir = tempfile.TemporaryDirectory()
 		temp = pathlib.Path(temp_dir.name)
 		input_file = temp/'The Empire Strikes Back.txt'
