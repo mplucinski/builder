@@ -87,17 +87,23 @@ class Process:
 		done.set()
 
 class TestProcess(unittest.TestCase):
-	message = 'Well done!'
+	message_out = 'Well done!'
+	message_err = 'Really nice!'
 
 	def test_process(self):
 		executable = sys.executable
 		process = Process(
-			args=[executable, '-c', 'print("{message}")'.format(message=self.message)],
-			capture_stdout=True
+			args=[executable, '-c', 'import sys;print("{stdout}");sys.stderr.write("{stderr}")'.format(
+				stdout=self.message_out, stderr=self.message_err
+			)],
+			capture_stdout=True,
+			capture_stderr=True
 		)
 		stdout, stderr = process.communicate()
 		stdout = stdout.decode('utf-8').strip()
-		self.assertEqual(self.message, stdout)
+		stderr = stderr.decode('utf-8').strip()
+		self.assertEqual(self.message_out, stdout)
+		self.assertEqual(self.message_err, stderr)
 
 def load_tests(loader, tests, pattern):
 	suite = unittest.TestSuite()
