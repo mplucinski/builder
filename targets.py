@@ -65,6 +65,20 @@ class Patch(Target):
 		)
 		patch.communicate()
 
+class Create(Target):
+	local_config_keys = {'file_name', 'kind', 'content'}
+	local_config_defaults = {'kind': 'file', 'content': None}
+
+	def build(self, config):
+		file_name = pathlib.Path(config['file_name'])
+		kind = config['kind']
+		if kind == 'file':
+			file_name.open('w').write(config['content'])
+		elif kind == 'directory':
+			file_name.mkdir(parents=True)
+		else:
+			raise Exception('Unsupported target kind: {}'.format(kind))
+
 class TestDownload(unittest.TestCase):
 	def test_download(self):
 		example_file = pathlib.Path(__file__)
@@ -160,10 +174,10 @@ YODA: You will know.  When your code you try to read six months
 		patch_file = temp/'The Empire Strikes Back.patch'
 		patch_file.open('w').write(self.patch.format(file_name=input_file.name))
 
-		patch = Patch('patch_files', **{
-			'directory': temp,
-			'file': patch_file
-		})
+		patch = Patch('patch_files',
+			directory=temp,
+			file=patch_file
+		)
 		config = MockConfig(Target.GlobalTargetLevel, {})
 		patch._build(config)
 
@@ -171,12 +185,50 @@ YODA: You will know.  When your code you try to read six months
 		self.assertEqual(self.output_file, output)
 		temp_dir.cleanup()
 
+class TestCreate(unittest.TestCase):
+	content = '''<refrigerator> [to dishwasher] "...so I'm inclined to believe that
+capping the capital gains tax at 13% would enable sustainable
+growth in the GNP of over 4%."'''
+	file_name = 'waiting for God.txt'
+	directory_name = 'example'
+
+	def test_create_file(self):
+		temp_dir = tempfile.TemporaryDirectory()
+		temp = pathlib.Path(temp_dir.name)
+		file_name = temp/self.file_name
+
+		create = Create('create_file',
+			file_name=file_name,
+			content=self.content
+		)
+		config = MockConfig(Target.GlobalTargetLevel)
+		create._build(config)
+
+		output = file_name.open().read()
+		self.assertEqual(self.content, output)
+		temp_dir.cleanup()
+
+	def test_create_directory(self):
+		temp_dir = tempfile.TemporaryDirectory()
+		temp = pathlib.Path(temp_dir.name)
+		directory_name = temp/self.directory_name
+
+		create = Create('create_file',
+			file_name=directory_name,
+			kind='directory'
+		)
+		config = MockConfig(Target.GlobalTargetLevel)
+		create._build(config)
+
+		self.assertTrue(directory_name.is_dir())
+		temp_dir.cleanup()
 
 def load_tests(loader, tests, pattern):
 	suite = unittest.TestSuite()
 	suite.addTests(loader.loadTestsFromTestCase(TestDownload))
 	suite.addTests(loader.loadTestsFromTestCase(TestExtract))
 	suite.addTests(loader.loadTestsFromTestCase(TestPatch))
+	suite.addTests(loader.loadTestsFromTestCase(TestCreate))
 	return suite
 
 if __name__ == '__main__':
