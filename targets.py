@@ -35,7 +35,7 @@ class Download(Target):
 		self.log(logging.INFO, 'downloading {} to {}...'.format(config['url'], str(target_dir)))
 		urllib.request.urlretrieve(config['url'], str(target_file))
 
-		config['file.output', Scope.Global, Target.GlobalTargetLevel] = target_file
+		config['file.output', Scope.Local, Target.GlobalTargetLevel] = target_file
 
 class Extract(Target):
 	local_config_keys = {'file.input'}
