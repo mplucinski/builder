@@ -29,6 +29,9 @@ class Config:
 		self.config = self._flatten_dict(config) if config is not None else dict()
 		self.parent = parent
 
+	def items(self):
+		return { k: self[k] for k in self }
+
 	@staticmethod
 	def _arg_key(key):
 		if isinstance(key, tuple):
@@ -197,6 +200,18 @@ class TestConfig(unittest.TestCase):
 		self.assertEqual('qwertz', config['keyboard.layout.germany'])
 		self.assertEqual({'germany': 'qwertz'}, config['keyboard.layout'])
 
+	def test_items(self):
+		cfg = {
+			'keyboard': {
+				'count': 104,
+				'layout': {
+					'usa': 'qwerty',
+					'france': 'azerty'
+				}
+			}
+		}
+		config = Config('cfg', config=cfg)
+		self.assertEqual(Config._flatten_dict(cfg), config.items())
 
 def load_tests(loader, tests, pattern):
 	suite = unittest.TestSuite()

@@ -34,6 +34,9 @@ class TargetConfig:
 		self.target = target
 		self.config = config
 
+	def items(self):
+		return self.config.items()
+
 	@staticmethod
 	def _arg_key(key):
 		if not isinstance(key, tuple):
