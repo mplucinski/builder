@@ -4,9 +4,29 @@
 import unittest
 
 class Config:
+	@staticmethod
+	def _flatten_dict(dictionary, prefix=''):
+		prefixed = lambda key: '{}.{}'.format(prefix, key) if prefix else key
+		output = {}
+		for key, value in dictionary.items():
+			if isinstance(value, dict):
+				output.update(Config._flatten_dict(value, prefixed(key)))
+			else:
+				output[prefixed(key)] = value
+		return output
+
+	@staticmethod
+	def _flatten_value(key, value):
+		output = {}
+		if isinstance(value, dict):
+			output.update(Config._flatten_dict(value, key))
+		else:
+			output[key] = value
+		return output
+
 	def __init__(self, name, config=None, parent=None):
 		self.name = name
-		self.config = config if config is not None else dict()
+		self.config = self._flatten_dict(config) if config is not None else dict()
 		self.parent = parent
 
 	@staticmethod
@@ -15,7 +35,10 @@ class Config:
 			return dict(key=key[0], level=key[1])
 		return dict(key=key, level=None)
 
-	def get(self, key, level=None, resolve=False):
+	def _get_subelements(self, key):
+		return { k for k in self.config if k.startswith(key+'.') }
+
+	def get_single(self, key, level=None, resolve=False):
 		try:
 			if level is not None and self.name != level:
 				raise KeyError(key)
@@ -28,11 +51,28 @@ class Config:
 				raise
 			return self.parent.get(key)
 
+	def get(self, key, *args, **kwargs):
+		try:
+			return self.get_single(key, *args, **kwargs)
+		except KeyError:
+			prefix = key+'.'
+			output = {}
+			for i in self:
+				if i.startswith(prefix):
+					output[i[len(prefix):]] = self[i]
+			if len(output) == 0:
+				raise KeyError(key)
+			return output
+
 	def set(self, key, value, level=None):
 		if level is not None and self.name != level:
 			self.parent.set(key, value, level)
 		else:
-			self.config[key] = value
+			remove = self._get_subelements(key)
+			for i in remove:
+				del self.config[i]
+			add = self._flatten_value(key, value)
+			self.config.update(add)
 
 	def __getitem__(self, key):
 		return self.get(resolve=True, **self._arg_key(key))
@@ -125,6 +165,38 @@ class TestConfig(unittest.TestCase):
 		config['baz'] = lambda config: config['foo']+' yea'
 		self.assertEqual('bar', config['foo'])
 		self.assertEqual('bar yea', config['baz'])
+
+	def test_dict_hierarchy(self):
+		config = Config('cfg', config={
+			'keyboard': {
+				'count': 104,
+				'layout': {
+					'usa': 'qwerty'
+				}
+			}
+		})
+		self.assertEqual(104, config['keyboard.count'])
+		self.assertEqual('qwerty', config['keyboard.layout.usa'])
+		self.assertRaises(KeyError, lambda: config['keyboard.layout.france'])
+		self.assertRaises(KeyError, lambda: config['keyboard.layout.germany'])
+		self.assertEqual({'usa': 'qwerty'}, config['keyboard.layout'])
+
+		config['keyboard.layout.france'] = 'azerty'
+		self.assertEqual(104, config['keyboard.count'])
+		self.assertEqual('qwerty', config['keyboard.layout.usa'])
+		self.assertEqual('azerty', config['keyboard.layout.france'])
+		self.assertRaises(KeyError, lambda: config['keyboard.layout.germany'])
+		self.assertEqual({'usa': 'qwerty', 'france': 'azerty'}, config['keyboard.layout'])
+
+		config['keyboard.layout'] = {
+			'germany': 'qwertz'
+		}
+		self.assertEqual(104, config['keyboard.count'])
+		self.assertRaises(KeyError, lambda: config['keyboard.layout.usa'])
+		self.assertRaises(KeyError, lambda: config['keyboard.layout.france'])
+		self.assertEqual('qwertz', config['keyboard.layout.germany'])
+		self.assertEqual({'germany': 'qwertz'}, config['keyboard.layout'])
+
 
 def load_tests(loader, tests, pattern):
 	suite = unittest.TestSuite()
