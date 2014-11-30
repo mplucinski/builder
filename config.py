@@ -15,11 +15,14 @@ class Config:
 			return dict(key=key[0], level=key[1])
 		return dict(key=key, level=None)
 
-	def get(self, key, level=None):
+	def get(self, key, level=None, resolve=False):
 		try:
 			if level is not None and self.name != level:
 				raise KeyError(key)
-			return self.config[key]
+			value = self.config[key]
+			if callable(value):
+				value = value(self)
+			return value
 		except KeyError:
 			if self.parent is None:
 				raise
@@ -32,10 +35,7 @@ class Config:
 			self.config[key] = value
 
 	def __getitem__(self, key):
-		value = self.get(**self._arg_key(key))
-		if callable(value):
-			value = value(self)
-		return value
+		return self.get(resolve=True, **self._arg_key(key))
 
 	def __setitem__(self, key, value):
 		self.set(value=value, **self._arg_key(key))
