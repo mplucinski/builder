@@ -85,6 +85,8 @@ class Target:
 		return 'target.{}.{}'.format(self.code, key)
 
 	def __init__(self, name, dependencies=None, **kwargs):
+		kwargs = Config._flatten_dict(kwargs)
+
 		self.name = name
 		self.code = _code_from_name(name)
 		self.dependencies = dependencies if dependencies is not None else set()
