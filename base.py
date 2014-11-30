@@ -30,13 +30,13 @@ class TargetConfig:
 		if len(key) >= 3: d['level'] = key[2]
 		return d
 
-	def get(self, key, scope=Scope.Local, level=None):
+	def get(self, key, scope=Scope.Local, level=None, resolve=False):
 		if scope == Scope.Local:
 			key = self.target._local_config_key(key)
-		return self.config.get(key, level)
+		return self.config.get(key, level, resolve=resolve)
 
 	def __getitem__(self, key):
-		return self.get(**self._arg_key(key))
+		return self.get(resolve=True, **self._arg_key(key))
 
 class Target:
 	local_config_keys = set()
