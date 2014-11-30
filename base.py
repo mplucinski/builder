@@ -5,6 +5,19 @@ from .config import Config
 def _code_from_name(name):
 	return name.lower().replace(' ', '_').replace('.', '_')
 
+def samefile(first, second):
+	def _stat(f):
+		try:
+			return f.stat()
+		except AttributeError:
+			import os
+			return os.stat(f)
+
+	import os.path
+	first = _stat(first)
+	second = _stat(second)
+	return os.path.samestat(first, second)
+
 class Profile:
 	def __init__(self, name, config=None):
 		self.name = name
