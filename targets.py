@@ -36,7 +36,7 @@ class Download(Target):
 		self.log(logging.INFO, 'downloading {}...'.format(config['url']))
 		urllib.request.urlretrieve(config['url'], str(target_file))
 
-		config['file.output', Scope.Global, 'target'] = target_file
+		config['file.output', Scope.Global, Target.GlobalTargetLevel] = target_file
 
 class TestDownload(unittest.TestCase):
 	def test_download(self):
@@ -48,7 +48,7 @@ class TestDownload(unittest.TestCase):
 
 		target_dir =  tempfile.TemporaryDirectory()
 
-		config = MockConfig('target', {
+		config = MockConfig(Target.GlobalTargetLevel, {
 			'directory.target': target_dir.name
 		})
 

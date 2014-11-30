@@ -77,6 +77,7 @@ class Build:
 					raise Exception('Global target "{}" not found'.format(i)) from e
 
 		for target in targets:
+			config = Config(Target.GlobalTargetLevel, {}, config)
 			target._build(config)
 
 

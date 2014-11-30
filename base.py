@@ -60,6 +60,8 @@ class TargetConfig:
 		self.set(value=value, **self._arg_key(key))
 
 class Target:
+	GlobalTargetLevel = 'target'
+
 	local_config_keys = set()
 
 	def _local_config_key(self, key):
