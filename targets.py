@@ -81,6 +81,28 @@ class Create(Target):
 		if config['file.mode']:
 			file_name.chmod(config['file.mode'])
 
+class Autotools(Target):
+	local_config_keys = {'scripts.autoreconf', 'scripts.configure'}
+	local_config_defaults = {
+		'scripts.autoreconf': shutil.which('autoreconf'),
+		'scripts.configure': lambda config: pathlib.Path(config['directory.source'])/'configure'
+	}
+
+	def build(self, config):
+		directory = config['directory.source']
+		process = Process(
+			config['scripts.autoreconf']+['-f'],
+			cwd=directory
+		)
+		process.communicate()
+
+		process = Process(
+			config['scripts.configure'],
+			cwd=directory
+		)
+		process.communicate()
+
+
 class TestDownload(unittest.TestCase):
 	def test_download(self):
 		example_file = pathlib.Path(__file__)
@@ -229,12 +251,36 @@ growth in the GNP of over 4%."'''
 		self.assertTrue(directory_name.is_dir())
 		temp_dir.cleanup()
 
+class TestAutotools(unittest.TestCase):
+	def test_autotools(self):
+		temp_dir = tempfile.TemporaryDirectory()
+		source_dir = pathlib.Path(temp_dir.name)
+		output_file = source_dir/'output.log'
+
+		autotools = Autotools('autotools_project',
+			directory={
+				'source': source_dir
+			},
+			scripts={
+				'autoreconf': [shutil.which('python3'), '-c', 'open("{}", "a").write("Autoreconf\\n")'.format(output_file)],
+				'configure': [shutil.which('python3'), '-c', 'open("{}", "a").write("Configure\\n")'.format(output_file)]
+			}
+		)
+		config = MockConfig(Target.GlobalTargetLevel)
+		autotools._build(config)
+
+		output = output_file.open().read()
+		self.assertEqual('Autoreconf\nConfigure\n', output)
+
+		temp_dir.cleanup()
+
 def load_tests(loader, tests, pattern):
 	suite = unittest.TestSuite()
 	suite.addTests(loader.loadTestsFromTestCase(TestDownload))
 	suite.addTests(loader.loadTestsFromTestCase(TestExtract))
 	suite.addTests(loader.loadTestsFromTestCase(TestPatch))
 	suite.addTests(loader.loadTestsFromTestCase(TestCreate))
+	suite.addTests(loader.loadTestsFromTestCase(TestAutotools))
 	return suite
 
 if __name__ == '__main__':
