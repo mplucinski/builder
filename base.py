@@ -14,6 +14,7 @@ class Profile:
 class Scope:
 	Local = 1
 	Global = 2
+	Auto = 3
 
 class TargetConfig:
 	def __init__(self, target, config):
@@ -30,9 +31,17 @@ class TargetConfig:
 		if len(key) >= 3: d['level'] = key[2]
 		return d
 
-	def get(self, key, scope=Scope.Local, level=None, resolve=False):
+	def get(self, key, scope=Scope.Auto, level=None, resolve=False):
 		if scope == Scope.Local:
 			key = self.target._local_config_key(key)
+		elif scope == Scope.Global:
+			pass
+		elif scope == Scope.Auto:
+			try:
+				return self.get(key, scope=Scope.Local, level=level, resolve=resolve)
+			except KeyError:
+				return self.get(key, scope=Scope.Global, level=level, resolve=resolve)
+
 		return self.config.get(key, level, resolve=resolve)
 
 	def __getitem__(self, key):
