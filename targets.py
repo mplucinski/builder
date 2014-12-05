@@ -52,9 +52,20 @@ class Extract(Target):
 		'directory.output': lambda config: str(pathlib.Path(config['directory.source']))
 	}
 
+	def _target_dir(self):
+		return pathlib.Path(self.config['directory.output'])
+
+	def _stamp_file(self):
+		file_name = pathlib.Path(self.config['file.name']).name
+		return self._target_dir().parent/'.extract-{}'.format(file_name)
+
+	@property
+	def outdated(self):
+		return not self._stamp_file().is_file()
+
 	def build(self):
 		file_input = self.config['file.name']
-		target_dir = pathlib.Path(self.config['directory.output'])
+		target_dir = self._target_dir()
 
 		try:
 			target_dir.mkdir(parents=True)
@@ -62,9 +73,13 @@ class Extract(Target):
 			pass
 
 		self.log(logging.INFO, 'extracting {}...'.format(file_input))
+		self.log(logging.DEBUG, 'in {}'.format(target_dir))
 		shutil.unpack_archive(str(file_input), str(target_dir))
+		self._stamp_file().touch()
 
-		self.config['directory.output', Scope.Local, Target.GlobalTargetLevel] = str(target_dir)
+	def post_build(self):
+		self.config['directory.output', Scope.Local, Target.GlobalTargetLevel] = str(self._target_dir())
+		self.config['file.stamp', Scope.Local, Target.GlobalTargetLevel] = self._stamp_file()
 
 class Patch(Target):
 	local_config_keys = {'file', 'directory', 'strip'}
@@ -161,8 +176,17 @@ class TestExtract(TestCase):
 				'directory.output': temp_dir_out_path
 		})
 		config = MockConfig(Target.GlobalTargetLevel, {})
-		extract._build(config)
-		self.assertEqual(str(temp_dir_out_path), config['target.extract_files.directory.output'])
+		config_1 = copy.deepcopy(config)
+		extract._build(config_1)
+		self.assertTrue(config_1['target.extract_files.build'])
+		self.assertEqual(str(temp_dir_out_path), config_1['target.extract_files.directory.output'])
+
+		self.assertEqualDirectories(this_directory, temp_dir_out_path)
+
+		config_2 = copy.deepcopy(config)
+		extract._build(config_2)
+		self.assertFalse(config_2['target.extract_files.build'])
+		self.assertEqual(str(temp_dir_out_path), config_2['target.extract_files.directory.output'])
 
 		self.assertEqualDirectories(this_directory, temp_dir_out_path)
 
