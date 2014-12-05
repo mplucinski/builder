@@ -12,6 +12,7 @@ from .base import Profile
 from .base import Scope
 from .base import Target
 from .config import Config
+from .tests import Skip
 from .tests import TestCase
 from . import targets
 
@@ -44,7 +45,8 @@ class Build:
 		'always_outdated': False,
 		'directory': {
 			'packages': lambda config: str(pathlib.Path(config['directory.root'])/'packages'),
-			'source':   lambda config: str(pathlib.Path(config['directory.root'])/'src')
+			'source':   lambda config: str(pathlib.Path(config['directory.root'])/'src'),
+			'stamps':   lambda config: str(pathlib.Path(config['directory.root'])/'stamps')
 		},
 		'process': {
 			'echo': {
@@ -181,7 +183,9 @@ class TestBuilder(TestCase):
 				'root': 'ROOT_DIRECTORY'
 			}
 		})
-		target = self.mock_target(MockTarget, 'some_target')
+		target = self.mock_target(MockTarget, 'some_target', **{
+			'directory.stamps': Skip
+		})
 		build.targets |= {target}
 		build()
 
@@ -189,7 +193,8 @@ class TestBuilder(TestCase):
 		expected_output.update({
 			'directory.packages': 'ROOT_DIRECTORY/default/packages',
 			'directory.root': 'ROOT_DIRECTORY/default',
-			'directory.source': 'ROOT_DIRECTORY/default/src'
+			'directory.source': 'ROOT_DIRECTORY/default/src',
+			'directory.stamps': 'ROOT_DIRECTORY/default/stamps'
 		})
 		self.assertEqual(expected_output, target.config_on_build.items())
 

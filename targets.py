@@ -55,14 +55,6 @@ class Extract(Target):
 	def _target_dir(self):
 		return pathlib.Path(self.config['directory.output'])
 
-	def _stamp_file(self):
-		file_name = pathlib.Path(self.config['file.name']).name
-		return self._target_dir().parent/'.extract-{}'.format(file_name)
-
-	@property
-	def outdated(self):
-		return not self._stamp_file().is_file()
-
 	def build(self):
 		file_input = self.config['file.name']
 		target_dir = self._target_dir()
@@ -75,11 +67,9 @@ class Extract(Target):
 		self.log(logging.INFO, 'extracting {}...'.format(file_input))
 		self.log(logging.DEBUG, 'in {}'.format(target_dir))
 		shutil.unpack_archive(str(file_input), str(target_dir))
-		self._stamp_file().touch()
 
 	def post_build(self):
 		self.config['directory.output', Scope.Local, Target.GlobalTargetLevel] = str(self._target_dir())
-		self.config['file.stamp', Scope.Local, Target.GlobalTargetLevel] = self._stamp_file()
 
 class Patch(Target):
 	local_config_keys = {'file', 'directory', 'strip'}
@@ -170,10 +160,12 @@ class TestExtract(TestCase):
 		archive_file = pathlib.Path(temp_dir.name)/'archive'
 		archive_file = pathlib.Path(shutil.make_archive(str(archive_file), format='gztar',
 				root_dir=str(this_directory)))
+		stamps_path = tempfile.TemporaryDirectory()
 
 		extract = self.mock_target(Extract, 'extract_files', **{
 				'file.name': archive_file,
-				'directory.output': temp_dir_out_path
+				'directory.output': temp_dir_out_path,
+				'directory.stamps': stamps_path.name
 		})
 		config = MockConfig(Target.GlobalTargetLevel, {})
 		config_1 = copy.deepcopy(config)
@@ -190,6 +182,7 @@ class TestExtract(TestCase):
 
 		self.assertEqualDirectories(this_directory, temp_dir_out_path)
 
+		stamps_path.cleanup()
 		temp_dir.cleanup()
 		temp_dir_out.cleanup()
 

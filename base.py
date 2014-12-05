@@ -1,4 +1,5 @@
 import logging
+import pathlib
 
 from .config import Config
 from .process import Process
@@ -100,7 +101,7 @@ class Target:
 
 	@property
 	def outdated(self):
-		return True
+		return not self._stamp_file().exists()
 
 	def call(self, *args, **kwargs):
 		if not 'echo_stdout' in kwargs:
@@ -115,6 +116,9 @@ class Target:
 
 	def post_build(self):
 		pass
+
+	def _stamp_file(self):
+		return pathlib.Path(self.config['directory.stamps'])/'.stamp-{}'.format(self.code)
 
 	def _build(self, config):
 		config = Config('target.{}'.format(self.code), self._config, config)
@@ -132,10 +136,18 @@ class Target:
 		if rebuild:
 			self.log(logging.INFO, 'building...')
 			self.build()
+
+			try:
+				self._stamp_file().parent.mkdir(parents=True)
+			except FileExistsError:
+				pass
+
+			self._stamp_file().touch()
 			self.log(logging.INFO, 'built.')
 		self.post_build()
 
 		self.config['build', Scope.Local, Target.GlobalTargetLevel] = rebuild
+		self.config['file.stamp', Scope.Local, Target.GlobalTargetLevel] = self._stamp_file()
 
 		self.config = None
 		self.log(logging.DEBUG, 'processed.')

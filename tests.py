@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import copy
 import pathlib
 import sys
+import tempfile
 import unittest
+
+class SkipType:
+	pass
+
+Skip = SkipType
 
 class TestCase(unittest.TestCase):
 	_config_defaults = {
@@ -12,9 +19,18 @@ class TestCase(unittest.TestCase):
 		'process.echo.stderr': False
 	}
 
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.stamps_dir = tempfile.TemporaryDirectory()
+		self._config_defaults = copy.deepcopy(self._config_defaults)
+		self._config_defaults['directory.stamps'] = self.stamps_dir.name
+
 	def mock_target(self, cls, *args, **kwargs):
 		for k, v in self._config_defaults.items():
-			if not k in kwargs:
+			if k in kwargs:
+				if kwargs[k] is Skip:
+					del kwargs[k]
+			else:
 				kwargs[k] = v
 
 		target = cls(*args, **kwargs)
