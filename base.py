@@ -65,7 +65,7 @@ class TargetConfig:
 			except KeyError:
 				return self.get(key, scope=Scope.Global, level=level, resolve=resolve)
 
-		return self.config.get(key=key, level=level, resolve=resolve)
+		return self.config.get(key=key, level=level, resolve=resolve, top_config=self)
 
 	def set(self, key, value, scope=Scope.Local, level=None):
 		if scope == Scope.Local:
