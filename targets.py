@@ -100,10 +100,10 @@ class Create(Target):
 			file_name.chmod(self.config['file.mode'])
 
 class Autotools(Target):
-	local_config_keys = {'scripts.autoreconf', 'scripts.configure'}
+	local_config_keys = {'directory.source', 'scripts.autoreconf', 'scripts.configure'}
 	local_config_defaults = {
-		'scripts.autoreconf': shutil.which('autoreconf'),
-		'scripts.configure': lambda config: pathlib.Path(config['directory.source'])/'configure'
+		'scripts.autoreconf': lambda config: [shutil.which('autoreconf')],
+		'scripts.configure': lambda config: [str(pathlib.Path(config['directory.source'])/'configure')]
 	}
 
 	def build(self):
