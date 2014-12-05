@@ -18,7 +18,9 @@ class Process:
 		flags = flags | os.O_NONBLOCK
 		fcntl.fcntl(fd, fcntl.F_SETFL, flags)
 
-	def __init__(self, args, cwd=None, env=None, stdin=False, capture_stdout=False, capture_stderr=False):
+	def __init__(self, args, cwd=None, env=None, stdin=False,
+			echo_stdout=True, echo_stderr=True,
+			capture_stdout=False, capture_stderr=False):
 		if cwd is not None:
 			cwd = str(cwd)
 
@@ -41,10 +43,13 @@ class Process:
 		self.process = subprocess.Popen(args, bufsize=0, cwd=cwd, env=env,
 			stdin=stdin, stdout=slave_stdout, stderr=slave_stderr)
 
+		pass_to_stdout = sys.stdout.buffer if echo_stdout else None
+		pass_to_stderr = sys.stderr.buffer if echo_stderr else None
+
 		self._reader_stdout = self.reader(master_stdout, capture_stdout,
-									self.buffer_stdout, sys.stdout.buffer)
+									self.buffer_stdout, pass_to_stdout)
 		self._reader_stderr = self.reader(master_stderr, capture_stderr,
-									self.buffer_stderr, sys.stderr.buffer)
+									self.buffer_stderr, pass_to_stderr)
 
 	def reader(self, *args):
 		stop = threading.Event()
@@ -78,14 +83,15 @@ class Process:
 				b = os.read(fd, 4096 if capture else 1)
 				if capture:
 					buffer.extend(b)
-				else:
+				if pass_to is not None:
 					pass_to.write(b)
 					if b'\n' in b:
 						pass_to.flush()
 			except BlockingIOError:
 				pass
 
-		pass_to.flush()
+		if pass_to is not None:
+			pass_to.flush()
 
 		done.set()
 
@@ -100,7 +106,9 @@ class TestProcess(unittest.TestCase):
 				stdout=self.message_out, stderr=self.message_err
 			)],
 			capture_stdout=True,
-			capture_stderr=True
+			capture_stderr=True,
+			echo_stdout=False,
+			echo_stderr=False
 		)
 		stdout, stderr = process.communicate()
 		stdout = stdout.decode('utf-8').strip()

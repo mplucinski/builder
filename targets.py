@@ -197,10 +197,12 @@ YODA: You will know.  When your code you try to read six months
 		patch_file = temp/'The Empire Strikes Back.patch'
 		patch_file.open('w').write(self.patch.format(file_name=input_file.name))
 
-		patch = Patch('patch_files',
-			directory=temp,
-			file=patch_file
-		)
+		patch = Patch('patch_files', **{
+			'directory': temp,
+			'file': patch_file,
+			'process.echo.stdout': False,
+			'process.echo.stderr': False
+		})
 		config = MockConfig(Target.GlobalTargetLevel, {})
 		patch._build(config)
 
@@ -256,15 +258,17 @@ class TestAutotools(unittest.TestCase):
 		source_dir = pathlib.Path(temp_dir.name)
 		output_file = source_dir/'output.log'
 
-		autotools = Autotools('autotools_project',
-			directory={
+		autotools = Autotools('autotools_project', **{
+			'directory': {
 				'source': source_dir
 			},
-			scripts={
+			'scripts': {
 				'autoreconf': [shutil.which('python3'), '-c', 'open("{}", "a").write("Autoreconf\\n")'.format(output_file)],
 				'configure': [shutil.which('python3'), '-c', 'open("{}", "a").write("Configure\\n")'.format(output_file)]
-			}
-		)
+			},
+			'process.echo.stdout': False,
+			'process.echo.stderr': False
+		})
 		config = MockConfig(Target.GlobalTargetLevel)
 		autotools._build(config)
 

@@ -43,6 +43,12 @@ class Build:
 		'directory': {
 			'packages': lambda config: str(pathlib.Path(config['directory.root'])/'packages'),
 			'source':   lambda config: str(pathlib.Path(config['directory.root'])/'src')
+		},
+		'process': {
+			'echo': {
+				'stdout': False,
+				'stderr': False
+			}
 		}
 	}
 
@@ -175,4 +181,6 @@ class TestBuilder(unittest.TestCase):
 			'directory.packages': 'ROOT_DIRECTORY/default/packages',
 			'directory.root': 'ROOT_DIRECTORY/default',
 			'directory.source': 'ROOT_DIRECTORY/default/src',
+			'process.echo.stdout': False,
+			'process.echo.stderr': False
 		}, target.config_on_build.items())

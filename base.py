@@ -99,6 +99,10 @@ class Target:
 		self._config.update({ self._local_config_key(k): v for k, v in self.local_config_defaults.items() if k not in kwargs  })
 
 	def call(self, *args, **kwargs):
+		if not 'echo_stdout' in kwargs:
+			kwargs['echo_stdout'] = self.config['process.echo.stdout']
+		if not 'echo_stderr' in kwargs:
+			kwargs['echo_stderr'] = self.config['process.echo.stderr']
 		process = Process(*args, **kwargs)
 		process.communicate()
 
