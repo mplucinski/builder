@@ -47,7 +47,6 @@ class Extract(Target):
 	}
 
 	def build(self, config):
-		config.config._dump()
 		file_input = config['file.name']
 		target_dir = pathlib.Path(config['directory.output'])
 
