@@ -5,7 +5,9 @@ import argparse
 import copy
 import logging
 import pathlib
+import shutil
 import sys
+import tarfile
 import unittest
 
 from .base import Profile
@@ -15,6 +17,20 @@ from .config import Config
 from .tests import Skip
 from .tests import TestCase
 from . import targets
+
+if not any([ '.xz' in i[1] for i in shutil.get_unpack_formats() ]):
+	def _extract_xz(filename, extract_dir):
+		try:
+			tarobj = tarfile.open(filename)
+		except tarfile.TarError as e:
+			raise ReadError('{} is not a tar file'.format(filename)) from e
+
+		try:
+			tarobj.extractall(extract_dir)
+		finally:
+			tarobj.close()
+
+	shutil.register_unpack_format('XZ file', ['.xz'], _extract_xz, [], 'Tar file compressed with XZ (LZMA) algorithm')
 
 def _init_logger(verbosity):
 	def verbosity_to_level(verbosity):
