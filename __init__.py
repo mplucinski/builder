@@ -37,6 +37,8 @@ def _init_logger(verbosity):
 	handler = logging.StreamHandler(sys.stdout)
 	handler.setFormatter(Formatter())
 	logging.getLogger().setLevel(verbosity_to_level(verbosity))
+	for i in copy.copy(logging.getLogger().handlers):
+		logging.getLogger().removeHandler(i)
 	logging.getLogger().addHandler(handler)
 	logging.debug('Logger configured')
 
