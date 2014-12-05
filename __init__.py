@@ -41,7 +41,8 @@ def _init_logger(verbosity):
 class Build:
 	_default_config = {
 		'directory': {
-			'source': lambda config: str(pathlib.Path(config['directory.root'])/'src')
+			'packages': lambda config: str(pathlib.Path(config['directory.root'])/'packages'),
+			'source':   lambda config: str(pathlib.Path(config['directory.root'])/'src')
 		}
 	}
 
@@ -171,6 +172,7 @@ class TestBuilder(unittest.TestCase):
 		build.targets |= {target}
 		build()
 		self.assertEqual({
+			'directory.packages': 'ROOT_DIRECTORY/default/packages',
 			'directory.root': 'ROOT_DIRECTORY/default',
 			'directory.source': 'ROOT_DIRECTORY/default/src',
 		}, target.config_on_build.items())

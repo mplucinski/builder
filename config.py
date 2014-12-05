@@ -29,6 +29,11 @@ class Config:
 		self.config = self._flatten_dict(config) if config is not None else dict()
 		self.parent = parent
 
+	def _dump(self):
+		print('Config', self.name, self.config)
+		if self.parent is not None:
+			self.parent._dump()
+
 	def items(self):
 		return { k: self[k] for k in self }
 

@@ -17,7 +17,10 @@ from .config import MockConfig
 from .process import Process
 
 class Download(Target):
-	local_config_keys = {'url'}
+	local_config_keys = {'url', 'directory.target'}
+	local_config_defaults = {
+		'directory.target': lambda config: config['directory.packages']
+	}
 
 	def build(self, config):
 		file_path = urllib.parse.urlparse(config['url']).path
@@ -38,10 +41,14 @@ class Download(Target):
 		config['file.output', Scope.Local, Target.GlobalTargetLevel] = target_file
 
 class Extract(Target):
-	local_config_keys = {'file.input'}
+	local_config_keys = {'file.name', 'directory.output'}
+	local_config_defaults = {
+		'directory.output': lambda config: str(pathlib.Path(config['directory.source']))
+	}
 
 	def build(self, config):
-		file_input = config['file.input']
+		config.config._dump()
+		file_input = config['file.name']
 		target_dir = pathlib.Path(config['directory.output'])
 
 		try:
@@ -139,7 +146,7 @@ class TestExtract(unittest.TestCase):
 				root_dir=str(this_directory))
 
 		extract = Extract('extract_files', **{
-				'file.input': archive_file,
+				'file.name': archive_file,
 				'directory.output': temp_dir_out_path
 		})
 		config = MockConfig(Target.GlobalTargetLevel, {})
