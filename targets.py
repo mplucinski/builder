@@ -4,6 +4,7 @@
 import copy
 import filecmp
 import logging
+import os
 import pathlib
 import shutil
 import tempfile
@@ -116,6 +117,18 @@ class Autotools(Target):
 		self.call(
 			self.config['scripts.configure'],
 			cwd=directory
+		)
+
+class Make(Target):
+	local_config_keys = {'directory.source', 'scripts.make'}
+	local_config_defaults = {
+		'scripts.make': lambda config: [shutil.which('make'), '-j{}'.format(os.cpu_count())]
+	}
+
+	def build(self):
+		self.call(
+			self.config['scripts.make'],
+			cwd=self.config['directory.source']
 		)
 
 class TestDownload(TestCase):
@@ -331,6 +344,23 @@ class TestAutotools(TestCase):
 
 		temp_dir.cleanup()
 
+class TestMake(TestCase):
+	def test_make(self):
+		temp_dir = tempfile.TemporaryDirectory()
+		temp = pathlib.Path(temp_dir.name)
+		output_file = temp/'output.log'
+
+		make = self.mock_target(Make, 'make_target', **{
+			'directory.source': temp,
+			'scripts.make': [shutil.which('python3'), '-c', 'open("{}", "w").write("Make\\n")'.format(output_file)]
+		})
+		config = MockConfig(Target.GlobalTargetLevel)
+		make._build(config)
+
+		self.assertEqual("Make\n", output_file.open().read())
+
+		temp_dir.cleanup()
+
 def load_tests(loader, tests, pattern):
 	suite = unittest.TestSuite()
 	suite.addTests(loader.loadTestsFromTestCase(TestDownload))
@@ -338,6 +368,7 @@ def load_tests(loader, tests, pattern):
 	suite.addTests(loader.loadTestsFromTestCase(TestPatch))
 	suite.addTests(loader.loadTestsFromTestCase(TestCreate))
 	suite.addTests(loader.loadTestsFromTestCase(TestAutotools))
+	suite.addTests(loader.loadTestsFromTestCase(TestMake))
 	return suite
 
 if __name__ == '__main__':
