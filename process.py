@@ -28,6 +28,7 @@ class Process:
 		logging.debug('Parameters: {}'.format(args))
 		logging.debug('Working directory: {}'.format(cwd))
 		logging.debug('Environment: {}'.format(env))
+		logging.debug('Echo: stdout: {}, stderr: {}'.format(echo_stdout, echo_stderr))
 
 		self.args = args
 
