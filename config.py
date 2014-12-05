@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # -*- config: utf-8 -*-
 
+import logging
 import unittest
 
+from .tests import _fn_log
 from .tests import TestCase
 
 class Config:
@@ -55,6 +57,7 @@ class Config:
 				raise KeyError(key)
 			value = self.config[key]
 			if callable(value) and resolve:
+				logging.log(logging.DEBUG-2, 'Resolving callable value for {}={}'.format(key, value))
 				value = value(top_config)
 			return value
 		except KeyError:
@@ -62,6 +65,7 @@ class Config:
 				raise
 			return self.parent.get(key, top_config=top_config, level=level, resolve=resolve)
 
+	@_fn_log(logging.DEBUG-2)
 	def get(self, key, *args, **kwargs):
 		try:
 			if 'top_config' not in kwargs:

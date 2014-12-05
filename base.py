@@ -3,6 +3,7 @@ import pathlib
 
 from .config import Config
 from .process import Process
+from .tests import _fn_log
 
 def _code_from_name(name):
 	return name.lower().replace(' ', '_').replace('.', '_')
@@ -49,6 +50,7 @@ class TargetConfig:
 		if len(key) >= 3: d['level'] = key[2]
 		return d
 
+	@_fn_log(logging.DEBUG-2)
 	def get(self, key, scope=Scope.Auto, level=None, resolve=False):
 		if scope == Scope.Local:
 			key = self.target._local_config_key(key)
