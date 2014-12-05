@@ -2,10 +2,25 @@
 # -*- coding: utf-8 -*-
 
 import copy
+import logging
 import pathlib
 import sys
 import tempfile
 import unittest
+
+def _log(level, msg):
+	logging.log(level, msg)
+
+def _fn_log(level):
+	def wrapper(fn):
+		def wrapper(*args, **kwargs):
+			_log(level, '{}({}, {})'.format(fn.__qualname__, ', '.join(map(repr, args)),
+				', '.join(['{}={}'.format(repr(k), repr(v)) for k, v in kwargs.items()]) ))
+			r = fn(*args, **kwargs)
+			_log(level, '{} = {}'.format(fn.__qualname__, repr(r)))
+			return r
+		return wrapper
+	return wrapper
 
 class SkipType:
 	pass
