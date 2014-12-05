@@ -14,7 +14,6 @@ from .base import samefile
 from .base import Scope
 from .base import Target
 from .config import MockConfig
-from .process import Process
 
 class Download(Target):
 	local_config_keys = {'url', 'directory.target'}
@@ -63,11 +62,10 @@ class Patch(Target):
 	local_config_defaults = {'strip': 1}
 
 	def build(self, config):
-		patch = Process(
+		self.call(
 			['patch', '-p{}'.format(config['strip']), '-i', str(config['file'])],
 			cwd=str(config['directory'])
 		)
-		patch.communicate()
 
 class Create(Target):
 	local_config_keys = {'file.name', 'file.kind', 'file.content', 'file.mode'}
@@ -94,18 +92,15 @@ class Autotools(Target):
 
 	def build(self, config):
 		directory = config['directory.source']
-		process = Process(
+		call(
 			config['scripts.autoreconf']+['-f'],
 			cwd=directory
 		)
-		process.communicate()
 
-		process = Process(
+		call(
 			config['scripts.configure'],
 			cwd=directory
 		)
-		process.communicate()
-
 
 class TestDownload(unittest.TestCase):
 	def test_download(self):

@@ -1,6 +1,7 @@
 import logging
 
 from .config import Config
+from .process import Process
 
 def _code_from_name(name):
 	return name.lower().replace(' ', '_').replace('.', '_')
@@ -96,6 +97,10 @@ class Target:
 		self.config = { k: v for k, v in kwargs.items() if k not in self.local_config_keys }
 		self.config.update({ self._local_config_key(k): v for k, v in kwargs.items() if k in self.local_config_keys })
 		self.config.update({ self._local_config_key(k): v for k, v in self.local_config_defaults.items() if k not in kwargs  })
+
+	def call(self, *args, **kwargs):
+		process = Process(*args, **kwargs)
+		process.communicate()
 
 	def log(self, level, message):
 		logging.log(level, '{}: {}'.format(self.name, message))
