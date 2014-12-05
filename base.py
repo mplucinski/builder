@@ -119,21 +119,23 @@ class Target:
 	def _build(self, config):
 		config = Config('target.{}'.format(self.code), self._config, config)
 
-		self.log(logging.INFO, 'processing dependencies...')
+		self.log(logging.DEBUG, 'processing dependencies...')
 		for dependency in self.dependencies:
 			dependency._build(config)
-		self.log(logging.INFO, 'dependencies ready.')
+		self.log(logging.DEBUG, 'dependencies ready.')
 
-		self.log(logging.INFO, 'building...')
+		self.log(logging.DEBUG, 'processing...')
 		self.config = TargetConfig(self, config)
 
 		rebuild = self.config['always_outdated'] or self.outdated
 
 		if rebuild:
+			self.log(logging.INFO, 'building...')
 			self.build()
+			self.log(logging.INFO, 'built.')
 		self.post_build()
 
 		self.config['build', Scope.Local, Target.GlobalTargetLevel] = rebuild
 
 		self.config = None
-		self.log(logging.INFO, 'built.')
+		self.log(logging.DEBUG, 'processed.')
