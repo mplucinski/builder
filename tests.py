@@ -6,13 +6,20 @@ import sys
 import unittest
 
 class TestCase(unittest.TestCase):
-	def mock_target(self, cls, *args, **kwargs):
-		if not 'process.echo.stdout' in kwargs:
-			kwargs['process.echo.stdout'] = False
-		if not 'process.echo.stderr' in kwargs:
-			kwargs['process.echo.stderr'] = False
+	_config_defaults = {
+		'always_outdated': False,
+		'process.echo.stdout': False,
+		'process.echo.stderr': False
+	}
 
-		return cls(*args, **kwargs)
+	def mock_target(self, cls, *args, **kwargs):
+		for k, v in self._config_defaults.items():
+			if not k in kwargs:
+				kwargs[k] = v
+
+		target = cls(*args, **kwargs)
+		target.defaults = self._config_defaults
+		return target
 
 if __name__ == '__main__':
 	directory = pathlib.Path(__file__).parent

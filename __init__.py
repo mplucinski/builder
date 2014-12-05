@@ -41,6 +41,7 @@ def _init_logger(verbosity):
 
 class Build:
 	_default_config = {
+		'always_outdated': False,
 		'directory': {
 			'packages': lambda config: str(pathlib.Path(config['directory.root'])/'packages'),
 			'source':   lambda config: str(pathlib.Path(config['directory.root'])/'src')
@@ -107,6 +108,11 @@ class MockTarget(Target):
 		super().__init__(*args, **kwargs)
 		self.build_called = False
 		self.config_on_build = None
+		self._outdated = True
+
+	@property
+	def outdated(self):
+		return self._outdated
 
 	def build(self):
 		self.build_called = True
@@ -175,39 +181,44 @@ class TestBuilder(TestCase):
 				'root': 'ROOT_DIRECTORY'
 			}
 		})
-		target = MockTarget('some_target')
+		target = self.mock_target(MockTarget, 'some_target')
 		build.targets |= {target}
 		build()
-		self.assertEqual({
+
+		expected_output = target.defaults.copy()
+		expected_output.update({
 			'directory.packages': 'ROOT_DIRECTORY/default/packages',
 			'directory.root': 'ROOT_DIRECTORY/default',
-			'directory.source': 'ROOT_DIRECTORY/default/src',
-			'process.echo.stdout': False,
-			'process.echo.stderr': False
-		}, target.config_on_build.items())
+			'directory.source': 'ROOT_DIRECTORY/default/src'
+		})
+		self.assertEqual(expected_output, target.config_on_build.items())
 
 	def test_outdated(self):
-		class Bar(Target):
-			@property
-			def outdated(self):
-				return self.__outdated
-
-			def build(self):
-				self.__built = True
-
 		build = MockBuild()
-		bar = Bar('bar')
+		bar = self.mock_target(MockTarget, 'bar')
 		foo = MockTarget('foo',
 			dependencies={bar}
 		)
 		build.targets |= {foo}
 
-		bar._Bar__built = False
-		bar._Bar__outdated = False
+		bar.build_called = False
+		bar._outdated = False
 		build()
-		self.assertFalse(bar._Bar__built)
+		self.assertFalse(bar.build_called)
 
-		bar._Bar__built = False
-		bar._Bar__outdated = True
+		bar.build_called = False
+		bar._outdated = True
 		build()
-		self.assertTrue(bar._Bar__built)
+		self.assertTrue(bar.build_called)
+
+	def test_always_outdated(self):
+		build = MockBuild()
+		foo = MockTarget('foo',
+			always_outdated=True
+		)
+		build.targets |= {foo}
+
+		foo.build_called = False
+		foo._outdated = False
+		build()
+		self.assertTrue(foo.build_called)
