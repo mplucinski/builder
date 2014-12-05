@@ -22,9 +22,16 @@ class Download(Target):
 		'directory.target': lambda config: config['directory.packages']
 	}
 
-	def build(self):
+	def _file_name(self):
 		file_path = urllib.parse.urlparse(self.config['url']).path
-		file_name = pathlib.Path(file_path).name
+		return pathlib.Path(file_path).name
+
+	@property
+	def outdated(self):
+		return not (pathlib.Path(self.config['directory.target'])/self._file_name()).is_file()
+
+	def build(self):
+		file_name = self._file_name()
 
 		target_dir = pathlib.Path(self.config['directory.target'])
 
@@ -119,6 +126,12 @@ class TestDownload(TestCase):
 		download._build(config)
 
 		self.assertTrue(str(config['target.download_plane.file.output']).endswith(example_file.name))
+		self.assertTrue(config['target.download_plane.build'])
+
+		download._build(config)
+		self.assertTrue(str(config['target.download_plane.file.output']).endswith(example_file.name))
+		self.assertFalse(config['target.download_plane.build'])
+
 		target_dir.cleanup()
 
 class TestExtract(TestCase):

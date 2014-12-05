@@ -123,7 +123,13 @@ class Target:
 
 		self.log(logging.INFO, 'building...')
 		self.config = TargetConfig(self, config)
-		if self.config['always_outdated'] or self.outdated:
+
+		rebuild = self.config['always_outdated'] or self.outdated
+
+		if rebuild:
 			self.build()
+
+		self.config['build', Scope.Local, Target.GlobalTargetLevel] = rebuild
+
 		self.config = None
 		self.log(logging.INFO, 'built.')
