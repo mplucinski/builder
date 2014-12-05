@@ -3,6 +3,8 @@
 
 import unittest
 
+from .tests import TestCase
+
 class Config:
 	@staticmethod
 	def _flatten_dict(dictionary, prefix=''):
@@ -126,7 +128,7 @@ class MockConfig(Config):
 		name = name if name is not None else 'mocked_config'
 		super().__init__(name, config=config)
 
-class TestConfig(unittest.TestCase):
+class TestConfig(TestCase):
 	def test_single_config(self):
 		config = Config('single')
 		self.assertEqual(0, len(config))

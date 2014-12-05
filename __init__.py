@@ -12,6 +12,7 @@ from .base import Profile
 from .base import Scope
 from .base import Target
 from .config import Config
+from .tests import TestCase
 from . import targets
 
 def _init_logger(verbosity):
@@ -126,7 +127,7 @@ class MockBuild(Build):
 class MockProfile(Profile):
 	pass
 
-class TestBuilder(unittest.TestCase):
+class TestBuilder(TestCase):
 	def test_single_target(self):
 		build = MockBuild()
 		foo = MockTarget('foo')

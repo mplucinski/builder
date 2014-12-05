@@ -14,6 +14,7 @@ from .base import samefile
 from .base import Scope
 from .base import Target
 from .config import MockConfig
+from .tests import TestCase
 
 class Download(Target):
 	local_config_keys = {'url', 'directory.target'}
@@ -104,7 +105,7 @@ class Autotools(Target):
 			cwd=directory
 		)
 
-class TestDownload(unittest.TestCase):
+class TestDownload(TestCase):
 	def test_download(self):
 		example_file = pathlib.Path(__file__)
 		target_dir = tempfile.TemporaryDirectory()
@@ -120,7 +121,7 @@ class TestDownload(unittest.TestCase):
 		self.assertTrue(str(config['target.download_plane.file.output']).endswith(example_file.name))
 		target_dir.cleanup()
 
-class TestExtract(unittest.TestCase):
+class TestExtract(TestCase):
 	def assertEqualDirectories(self, left, right):
 		diff = filecmp.dircmp(str(left), str(right))
 		if len(diff.left_only) != 0:
@@ -154,7 +155,7 @@ class TestExtract(unittest.TestCase):
 		temp_dir.cleanup()
 		temp_dir_out.cleanup()
 
-class TestPatch(unittest.TestCase):
+class TestPatch(TestCase):
 	input_file = '''YODA: Code!  Yes.  A programmer's strength flows from code
       maintainability.  But beware of Perl.  Terse syntax... more
       than one way to do it...  default variables.  The dark side
@@ -213,7 +214,7 @@ YODA: You will know.  When your code you try to read six months
 		self.assertEqual(self.output_file, output)
 		temp_dir.cleanup()
 
-class TestCreate(unittest.TestCase):
+class TestCreate(TestCase):
 	content = '''<refrigerator> [to dishwasher] "...so I'm inclined to believe that
 capping the capital gains tax at 13% would enable sustainable
 growth in the GNP of over 4%."'''
@@ -255,7 +256,7 @@ growth in the GNP of over 4%."'''
 		self.assertTrue(directory_name.is_dir())
 		temp_dir.cleanup()
 
-class TestAutotools(unittest.TestCase):
+class TestAutotools(TestCase):
 	def test_autotools(self):
 		temp_dir = tempfile.TemporaryDirectory()
 		source_dir = pathlib.Path(temp_dir.name)
