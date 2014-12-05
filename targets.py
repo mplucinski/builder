@@ -110,7 +110,7 @@ class TestDownload(TestCase):
 		example_file = pathlib.Path(__file__)
 		target_dir = tempfile.TemporaryDirectory()
 
-		download = Download('download_plane',
+		download = self.mock_target(Download, 'download_plane',
 			url=lambda config: example_file.as_uri()
 		)
 		config = MockConfig(Target.GlobalTargetLevel, {
@@ -142,7 +142,7 @@ class TestExtract(TestCase):
 		archive_file = pathlib.Path(shutil.make_archive(str(archive_file), format='gztar',
 				root_dir=str(this_directory)))
 
-		extract = Extract('extract_files', **{
+		extract = self.mock_target(Extract, 'extract_files', **{
 				'file.name': archive_file,
 				'directory.output': temp_dir_out_path
 		})
@@ -224,7 +224,7 @@ growth in the GNP of over 4%."'''
 		temp = pathlib.Path(temp_dir.name)
 		file_name = temp/self.file_name
 
-		create = Create('create_file',
+		create = self.mock_target(Create, 'create_file',
 			file={
 				'name': file_name,
 				'content': self.content
@@ -242,7 +242,7 @@ growth in the GNP of over 4%."'''
 		temp = pathlib.Path(temp_dir.name)
 		directory_name = temp/self.directory_name
 
-		create = Create('create_file',
+		create = self.mock_target(Create, 'create_file',
 			file={
 				'name': directory_name,
 				'kind': 'directory'
