@@ -33,6 +33,9 @@ class Config:
 		self.config = self._flatten_dict(config) if config is not None else dict()
 		self.parent = parent
 
+	def __repr__(self):
+		return '<{} name={}>'.format(self.__class__.__qualname__, self.name)
+
 	def _dump(self):
 		print('Config', self.name, self.config)
 		if self.parent is not None:

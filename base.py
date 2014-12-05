@@ -37,6 +37,9 @@ class TargetConfig:
 		self.target = target
 		self.config = config
 
+	def __repr__(self):
+		return '<{} for target {}>'.format(self.__class__.__qualname__, self.target.name)
+
 	def items(self):
 		return self.config.items()
 
