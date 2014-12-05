@@ -57,7 +57,7 @@ class Extract(Target):
 			pass
 
 		self.log(logging.INFO, 'extracting {}...'.format(file_input))
-		shutil.unpack_archive(file_input, str(target_dir))
+		shutil.unpack_archive(str(file_input), str(target_dir))
 
 class Patch(Target):
 	local_config_keys = {'file', 'directory', 'strip'}
@@ -142,8 +142,8 @@ class TestExtract(unittest.TestCase):
 		temp_dir_out = tempfile.TemporaryDirectory()
 		temp_dir_out_path = pathlib.Path(temp_dir_out.name)
 		archive_file = pathlib.Path(temp_dir.name)/'archive'
-		archive_file = shutil.make_archive(str(archive_file), format='gztar',
-				root_dir=str(this_directory))
+		archive_file = pathlib.Path(shutil.make_archive(str(archive_file), format='gztar',
+				root_dir=str(this_directory)))
 
 		extract = Extract('extract_files', **{
 				'file.name': archive_file,
