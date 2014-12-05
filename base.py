@@ -98,6 +98,10 @@ class Target:
 		self._config.update({ self._local_config_key(k): v for k, v in kwargs.items() if k in self.local_config_keys })
 		self._config.update({ self._local_config_key(k): v for k, v in self.local_config_defaults.items() if k not in kwargs  })
 
+	@property
+	def outdated(self):
+		return True
+
 	def call(self, *args, **kwargs):
 		if not 'echo_stdout' in kwargs:
 			kwargs['echo_stdout'] = self.config['process.echo.stdout']
@@ -119,6 +123,7 @@ class Target:
 
 		self.log(logging.INFO, 'building...')
 		self.config = TargetConfig(self, config)
-		self.build()
+		if self.outdated:
+			self.build()
 		self.config = None
 		self.log(logging.INFO, 'built.')

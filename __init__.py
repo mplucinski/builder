@@ -184,3 +184,29 @@ class TestBuilder(unittest.TestCase):
 			'process.echo.stdout': False,
 			'process.echo.stderr': False
 		}, target.config_on_build.items())
+
+	def test_outdated(self):
+		class Bar(Target):
+			@property
+			def outdated(self):
+				return self.__outdated
+
+			def build(self):
+				self.__built = True
+
+		build = MockBuild()
+		bar = Bar('bar')
+		foo = MockTarget('foo',
+			dependencies={bar}
+		)
+		build.targets |= {foo}
+
+		bar._Bar__built = False
+		bar._Bar__outdated = False
+		build()
+		self.assertFalse(bar._Bar__built)
+
+		bar._Bar__built = False
+		bar._Bar__outdated = True
+		build()
+		self.assertTrue(bar._Bar__built)
