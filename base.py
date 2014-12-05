@@ -114,5 +114,7 @@ class Target:
 		self.log(logging.INFO, 'dependencies ready.')
 
 		self.log(logging.INFO, 'building...')
-		self.build(TargetConfig(self, config))
+		self.config = TargetConfig(self, config)
+		self.build()
+		self.config = None
 		self.log(logging.INFO, 'built.')

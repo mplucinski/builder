@@ -21,11 +21,11 @@ class Download(Target):
 		'directory.target': lambda config: config['directory.packages']
 	}
 
-	def build(self, config):
-		file_path = urllib.parse.urlparse(config['url']).path
+	def build(self):
+		file_path = urllib.parse.urlparse(self.config['url']).path
 		file_name = pathlib.Path(file_path).name
 
-		target_dir = pathlib.Path(config['directory.target'])
+		target_dir = pathlib.Path(self.config['directory.target'])
 
 		try:
 			target_dir.mkdir(parents=True)
@@ -34,10 +34,10 @@ class Download(Target):
 
 		target_file = target_dir/file_name
 
-		self.log(logging.INFO, 'downloading {} to {}...'.format(config['url'], str(target_dir)))
-		urllib.request.urlretrieve(config['url'], str(target_file))
+		self.log(logging.INFO, 'downloading {} to {}...'.format(self.config['url'], str(target_dir)))
+		urllib.request.urlretrieve(self.config['url'], str(target_file))
 
-		config['file.output', Scope.Local, Target.GlobalTargetLevel] = target_file
+		self.config['file.output', Scope.Local, Target.GlobalTargetLevel] = target_file
 
 class Extract(Target):
 	local_config_keys = {'file.name', 'directory.output'}
@@ -45,9 +45,9 @@ class Extract(Target):
 		'directory.output': lambda config: str(pathlib.Path(config['directory.source']))
 	}
 
-	def build(self, config):
-		file_input = config['file.name']
-		target_dir = pathlib.Path(config['directory.output'])
+	def build(self):
+		file_input = self.config['file.name']
+		target_dir = pathlib.Path(self.config['directory.output'])
 
 		try:
 			target_dir.mkdir(parents=True)
@@ -61,27 +61,27 @@ class Patch(Target):
 	local_config_keys = {'file', 'directory', 'strip'}
 	local_config_defaults = {'strip': 1}
 
-	def build(self, config):
+	def build(self):
 		self.call(
-			['patch', '-p{}'.format(config['strip']), '-i', str(config['file'])],
-			cwd=str(config['directory'])
+			['patch', '-p{}'.format(self.config['strip']), '-i', str(self.config['file'])],
+			cwd=str(self.config['directory'])
 		)
 
 class Create(Target):
 	local_config_keys = {'file.name', 'file.kind', 'file.content', 'file.mode'}
 	local_config_defaults = {'file.kind': 'file', 'file.content': None, 'file.mode': None}
 
-	def build(self, config):
-		file_name = pathlib.Path(config['file.name'])
-		kind = config['file.kind']
+	def build(self):
+		file_name = pathlib.Path(self.config['file.name'])
+		kind = self.config['file.kind']
 		if kind == 'file':
-			file_name.open('w').write(config['file.content'])
+			file_name.open('w').write(self.config['file.content'])
 		elif kind == 'directory':
 			file_name.mkdir(parents=True)
 		else:
 			raise Exception('Unsupported target kind: {}'.format(kind))
-		if config['file.mode']:
-			file_name.chmod(config['file.mode'])
+		if self.config['file.mode']:
+			file_name.chmod(self.config['file.mode'])
 
 class Autotools(Target):
 	local_config_keys = {'scripts.autoreconf', 'scripts.configure'}
@@ -90,15 +90,15 @@ class Autotools(Target):
 		'scripts.configure': lambda config: pathlib.Path(config['directory.source'])/'configure'
 	}
 
-	def build(self, config):
-		directory = config['directory.source']
+	def build(self):
+		directory = self.config['directory.source']
 		self.call(
-			config['scripts.autoreconf']+['-f'],
+			self.config['scripts.autoreconf']+['-f'],
 			cwd=directory
 		)
 
 		self.call(
-			config['scripts.configure'],
+			self.config['scripts.configure'],
 			cwd=directory
 		)
 

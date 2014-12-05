@@ -101,9 +101,9 @@ class MockTarget(Target):
 		self.build_called = False
 		self.config_on_build = None
 
-	def build(self, config):
+	def build(self):
 		self.build_called = True
-		self.config_on_build = copy.deepcopy(config)
+		self.config_on_build = copy.deepcopy(self.config)
 
 class MockBuild(Build):
 	def __init__(self, config=None):
