@@ -6,7 +6,13 @@ import sys
 import unittest
 
 class TestCase(unittest.TestCase):
-	pass
+	def mock_target(self, cls, *args, **kwargs):
+		if not 'process.echo.stdout' in kwargs:
+			kwargs['process.echo.stdout'] = False
+		if not 'process.echo.stderr' in kwargs:
+			kwargs['process.echo.stderr'] = False
+
+		return cls(*args, **kwargs)
 
 if __name__ == '__main__':
 	directory = pathlib.Path(__file__).parent
