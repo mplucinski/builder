@@ -47,6 +47,7 @@ class Build:
 		'always_outdated': False,
 		'directory': {
 			'binaries': lambda config: str(pathlib.Path(config['directory.root'])/'bin'),
+			'include':  lambda config: str(pathlib.Path(config['directory.root'])/'include'),
 			'packages': lambda config: str(pathlib.Path(config['directory.root'])/'packages'),
 			'source':   lambda config: str(pathlib.Path(config['directory.root'])/'src'),
 			'stamps':   lambda config: str(pathlib.Path(config['directory.root'])/'stamps')
@@ -195,6 +196,7 @@ class TestBuilder(TestCase):
 		expected_output = target.defaults.copy()
 		expected_output.update({
 			'directory.binaries': 'ROOT_DIRECTORY/default/bin',
+			'directory.include': 'ROOT_DIRECTORY/default/include',
 			'directory.packages': 'ROOT_DIRECTORY/default/packages',
 			'directory.root': 'ROOT_DIRECTORY/default',
 			'directory.source': 'ROOT_DIRECTORY/default/src',
