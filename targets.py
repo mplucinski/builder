@@ -89,6 +89,8 @@ class Create(Target):
 		file_name = pathlib.Path(self.config['file.name'])
 		kind = self.config['file.kind']
 		if kind == 'file':
+			if not file_name.parent.exists():
+				file_name.parent.mkdir(parents=True)
 			file_name.open('w').write(self.config['file.content'])
 		elif kind == 'directory':
 			file_name.mkdir(parents=True)
@@ -283,6 +285,27 @@ growth in the GNP of over 4%."'''
 		create._build(config)
 
 		self.assertTrue(directory_name.is_dir())
+		temp_dir.cleanup()
+
+	def test_create_file_in_directory(self):
+		temp_dir = tempfile.TemporaryDirectory()
+		temp = pathlib.Path(temp_dir.name)
+
+		directory_name = temp/self.directory_name
+		file_name = directory_name/self.file_name
+
+		create = self.mock_target(Create, 'create_dir_and_file',
+			file={
+				'name': str(file_name),
+				'content': self.content
+			}
+		)
+		config = MockConfig(Target.GlobalTargetLevel)
+		create._build(config)
+
+		self.assertTrue(directory_name.is_dir())
+		self.assertEqual(self.content, file_name.open().read())
+
 		temp_dir.cleanup()
 
 class TestAutotools(TestCase):
