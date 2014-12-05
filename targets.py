@@ -92,12 +92,12 @@ class Autotools(Target):
 
 	def build(self, config):
 		directory = config['directory.source']
-		call(
+		self.call(
 			config['scripts.autoreconf']+['-f'],
 			cwd=directory
 		)
 
-		call(
+		self.call(
 			config['scripts.configure'],
 			cwd=directory
 		)

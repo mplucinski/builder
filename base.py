@@ -94,9 +94,9 @@ class Target:
 		self.name = name
 		self.code = _code_from_name(name)
 		self.dependencies = dependencies if dependencies is not None else set()
-		self.config = { k: v for k, v in kwargs.items() if k not in self.local_config_keys }
-		self.config.update({ self._local_config_key(k): v for k, v in kwargs.items() if k in self.local_config_keys })
-		self.config.update({ self._local_config_key(k): v for k, v in self.local_config_defaults.items() if k not in kwargs  })
+		self._config = { k: v for k, v in kwargs.items() if k not in self.local_config_keys }
+		self._config.update({ self._local_config_key(k): v for k, v in kwargs.items() if k in self.local_config_keys })
+		self._config.update({ self._local_config_key(k): v for k, v in self.local_config_defaults.items() if k not in kwargs  })
 
 	def call(self, *args, **kwargs):
 		process = Process(*args, **kwargs)
@@ -106,7 +106,7 @@ class Target:
 		logging.log(level, '{}: {}'.format(self.name, message))
 
 	def _build(self, config):
-		config = Config('target.{}'.format(self.code), self.config, config)
+		config = Config('target.{}'.format(self.code), self._config, config)
 
 		self.log(logging.INFO, 'processing dependencies...')
 		for dependency in self.dependencies:
