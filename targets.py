@@ -16,6 +16,7 @@ from .base import samefile
 from .base import Scope
 from .base import Target
 from .config import MockConfig
+from .tests import _fn_log
 from .tests import TestCase
 
 class Download(Target):
@@ -99,6 +100,23 @@ class Create(Target):
 			raise Exception('Unsupported target kind: {}'.format(kind))
 		if self.config['file.mode']:
 			file_name.chmod(self.config['file.mode'])
+
+class Copy(Target):
+	local_config_keys = {'source', 'destination'}
+
+	@_fn_log(logging.DEBUG)
+	def _copy(self, source, destination):
+		if source.is_file():
+			shutil.copy2(str(source), str(destination))
+		else:
+			shutil.copytree(str(source), str(destination))
+
+	def build(self):
+		source = map(pathlib.Path, self.config['source'])
+		destination = pathlib.Path(self.config['destination'])
+
+		for i in source:
+			self._copy(i, destination)
 
 class Autotools(Target):
 	local_config_keys = {'directory.source', 'scripts.autoreconf', 'scripts.configure'}
@@ -321,6 +339,26 @@ growth in the GNP of over 4%."'''
 
 		temp_dir.cleanup()
 
+class TestCopy(TestCase):
+	def test_copy(self):
+		this_directory = pathlib.Path(__file__).parent
+		temp_dir = tempfile.TemporaryDirectory()
+		temp = pathlib.Path(temp_dir.name)
+
+		copy = self.mock_target(Copy, 'copy_files', **{
+			'source': lambda config: this_directory.glob('*.py'),
+			'destination': temp
+		})
+		config = MockConfig(Target.GlobalTargetLevel)
+		copy._build(config)
+
+		for i in temp.iterdir():
+			if i.is_file():
+				j = this_directory/i.name
+				self.assertEqual(j.open().read(), i.open().read())
+
+		temp_dir.cleanup()
+
 class TestAutotools(TestCase):
 	def test_autotools(self):
 		temp_dir = tempfile.TemporaryDirectory()
@@ -367,6 +405,7 @@ def load_tests(loader, tests, pattern):
 	suite.addTests(loader.loadTestsFromTestCase(TestExtract))
 	suite.addTests(loader.loadTestsFromTestCase(TestPatch))
 	suite.addTests(loader.loadTestsFromTestCase(TestCreate))
+	suite.addTests(loader.loadTestsFromTestCase(TestCopy))
 	suite.addTests(loader.loadTestsFromTestCase(TestAutotools))
 	suite.addTests(loader.loadTestsFromTestCase(TestMake))
 	return suite
