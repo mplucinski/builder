@@ -57,6 +57,8 @@ class Extract(Target):
 		self.log(logging.INFO, 'extracting {}...'.format(file_input))
 		shutil.unpack_archive(str(file_input), str(target_dir))
 
+		self.config['directory.output', Scope.Local, Target.GlobalTargetLevel] = str(target_dir)
+
 class Patch(Target):
 	local_config_keys = {'file', 'directory', 'strip'}
 	local_config_defaults = {'strip': 1}
@@ -145,6 +147,7 @@ class TestExtract(unittest.TestCase):
 		})
 		config = MockConfig(Target.GlobalTargetLevel, {})
 		extract._build(config)
+		self.assertEqual(str(temp_dir_out_path), config['target.extract_files.directory.output'])
 
 		self.assertEqualDirectories(this_directory, temp_dir_out_path)
 
