@@ -12,15 +12,15 @@ def _log(level, msg):
 	logging.log(level, msg)
 
 def _fn_log(level):
-	def wrapper(fn):
-		def wrapper(*args, **kwargs):
+	def wrapper1(fn):
+		def wrapper2(*args, **kwargs):
 			_log(level, '{}({}, {})'.format(fn.__qualname__, ', '.join(map(repr, args)),
 				', '.join(['{}={}'.format(repr(k), repr(v)) for k, v in kwargs.items()]) ))
 			r = fn(*args, **kwargs)
-			_log(level, '{} = {}'.format(fn.__qualname__, repr(r)))
+			_log(level, '{}(...) = {}'.format(fn.__qualname__, repr(r)))
 			return r
-		return wrapper
-	return wrapper
+		return wrapper2
+	return wrapper1
 
 class SkipType:
 	pass
