@@ -144,14 +144,15 @@ class Autotools(Target):
 		)
 
 class Make(Target):
-	local_config_keys = {'directory.source', 'scripts.make'}
+	local_config_keys = {'directory.source', 'make.targets', 'scripts.make'}
 	local_config_defaults = {
+		'make.targets': None,
 		'scripts.make': lambda config: [shutil.which('make'), '-j{}'.format(os.cpu_count())]
 	}
 
 	def build(self):
 		self.call(
-			self.config['scripts.make'],
+			self.config['scripts.make']+([] if self.config['make.targets'] is None else self.config['make.targets']),
 			cwd=self.config['directory.source']
 		)
 
@@ -394,14 +395,21 @@ class TestMake(TestCase):
 		temp = pathlib.Path(temp_dir.name)
 		output_file = temp/'output.log'
 
+		targets = ['a', 'b', 'c']
 		make = self.mock_target(Make, 'make_target', **{
 			'directory.source': temp,
-			'scripts.make': [shutil.which('python3'), '-c', 'open("{}", "w").write("Make\\n")'.format(output_file)]
+			'make.targets': targets,
+			'scripts.make': lambda config: [
+				shutil.which('python3'), '-c',
+				'open("{}", "w") .write("Make\\n{}\\n")'.format(
+					output_file, config['make.targets']
+				)
+			]
 		})
 		config = MockConfig(Target.GlobalTargetLevel)
 		make._build(config)
 
-		self.assertEqual("Make\n", output_file.open().read())
+		self.assertEqual('Make\n{}\n'.format(repr(targets)), output_file.open().read())
 
 		temp_dir.cleanup()
 
