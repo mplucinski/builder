@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import copy
 import filecmp
 import logging
 import pathlib
@@ -26,26 +27,24 @@ class Download(Target):
 		file_path = urllib.parse.urlparse(self.config['url']).path
 		return pathlib.Path(file_path).name
 
+	def _target_file(self):
+		return pathlib.Path(self.config['directory.target'])/self._file_name()
+
 	@property
 	def outdated(self):
-		return not (pathlib.Path(self.config['directory.target'])/self._file_name()).is_file()
+		return not self._target_file().is_file()
 
 	def build(self):
-		file_name = self._file_name()
-
-		target_dir = pathlib.Path(self.config['directory.target'])
-
 		try:
-			target_dir.mkdir(parents=True)
+			pathlib.Path(self.config['directory.target']).mkdir(parents=True)
 		except FileExistsError:
 			pass
 
-		target_file = target_dir/file_name
+		self.log(logging.INFO, 'downloading {} to {}...'.format(self.config['url'], str(self.config['directory.target'])))
+		urllib.request.urlretrieve(self.config['url'], str(self._target_file()))
 
-		self.log(logging.INFO, 'downloading {} to {}...'.format(self.config['url'], str(target_dir)))
-		urllib.request.urlretrieve(self.config['url'], str(target_file))
-
-		self.config['file.output', Scope.Local, Target.GlobalTargetLevel] = target_file
+	def post_build(self):
+		self.config['file.output', Scope.Local, Target.GlobalTargetLevel] = self._target_file()
 
 class Extract(Target):
 	local_config_keys = {'file.name', 'directory.output'}
@@ -123,14 +122,16 @@ class TestDownload(TestCase):
 		config = MockConfig(Target.GlobalTargetLevel, {
 			'directory.target': target_dir.name
 		})
-		download._build(config)
+		config_1 = copy.deepcopy(config)
+		download._build(config_1)
 
-		self.assertTrue(str(config['target.download_plane.file.output']).endswith(example_file.name))
-		self.assertTrue(config['target.download_plane.build'])
+		self.assertTrue(str(config_1['target.download_plane.file.output']).endswith(example_file.name))
+		self.assertTrue(config_1['target.download_plane.build'])
 
-		download._build(config)
-		self.assertTrue(str(config['target.download_plane.file.output']).endswith(example_file.name))
-		self.assertFalse(config['target.download_plane.build'])
+		config_2 = copy.deepcopy(config)
+		download._build(config_2)
+		self.assertTrue(str(config_2['target.download_plane.file.output']).endswith(example_file.name))
+		self.assertFalse(config_2['target.download_plane.build'])
 
 		target_dir.cleanup()
 

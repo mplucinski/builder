@@ -113,6 +113,9 @@ class Target:
 	def log(self, level, message):
 		logging.log(level, '{}: {}'.format(self.name, message))
 
+	def post_build(self):
+		pass
+
 	def _build(self, config):
 		config = Config('target.{}'.format(self.code), self._config, config)
 
@@ -128,6 +131,7 @@ class Target:
 
 		if rebuild:
 			self.build()
+		self.post_build()
 
 		self.config['build', Scope.Local, Target.GlobalTargetLevel] = rebuild
 
