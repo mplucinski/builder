@@ -104,8 +104,9 @@ class Create(Target):
 class Copy(Target):
 	local_config_keys = {'source', 'destination'}
 
-	@_fn_log(logging.DEBUG)
+	@_fn_log(logging.DEBUG-2)
 	def _copy(self, source, destination):
+		self.log(logging.DEBUG-1, 'copying "{}" -> "{}"'.format(source, destination))
 		if source.is_file():
 			shutil.copy2(str(source), str(destination))
 		else:
@@ -115,8 +116,13 @@ class Copy(Target):
 		source = map(pathlib.Path, self.config['source'])
 		destination = pathlib.Path(self.config['destination'])
 
+		try:
+			destination.mkdir(parents=True)
+		except FileExistsError:
+			pass
+
 		for i in source:
-			self._copy(i, destination)
+			self._copy(i, destination/i.name)
 
 class Autotools(Target):
 	local_config_keys = {'directory.source', 'scripts.autoreconf', 'scripts.configure'}
