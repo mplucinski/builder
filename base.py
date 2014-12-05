@@ -27,9 +27,9 @@ class Profile:
 		self.config = config if config is not None else dict()
 
 class Scope:
-	Local = 1
-	Global = 2
-	Auto = 3
+	Local = 'Local'
+	Global = 'Global'
+	Auto = 'Auto'
 
 class TargetConfig:
 	def __init__(self, target, config):
