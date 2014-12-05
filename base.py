@@ -6,7 +6,7 @@ from .process import Process
 from .tests import _fn_log
 
 def _code_from_name(name):
-	return name.lower().replace(' ', '_').replace('.', '_')
+	return name.lower().replace(' ', '_').replace('.', '_').replace('-', '_')
 
 def samefile(first, second):
 	def _stat(f):
