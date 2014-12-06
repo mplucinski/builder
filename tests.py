@@ -30,6 +30,10 @@ Skip = SkipType
 class TestCase(unittest.TestCase):
 	_config_defaults = {
 		'always_outdated': False,
+		'language.c.compiler': 'C_COMPILER',
+		'language.c.flags': 'C_FLAGS',
+		'language.c++.compiler': 'C++_COMPILER',
+		'language.c++.flags': 'C++_FLAGS',
 		'process.echo.stdout': False,
 		'process.echo.stderr': False
 	}
@@ -51,6 +55,16 @@ class TestCase(unittest.TestCase):
 		target = cls(*args, **kwargs)
 		target.defaults = self._config_defaults
 		return target
+
+	def mock_process(self, stdout, stderr):
+		class MockProcess:
+			def __init__(self, args, **kwargs):
+				pass
+
+			def communicate(self):
+				return stdout, stderr
+
+		return MockProcess
 
 if __name__ == '__main__':
 	directory = pathlib.Path(__file__).parent

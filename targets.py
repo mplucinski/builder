@@ -139,8 +139,15 @@ class Autotools(Target):
 		)
 
 		self.call(
-			self.config['scripts.configure'],
-			cwd=directory
+			self.config['scripts.configure']+
+				['--prefix={}'.format(self.config['directory.root'])],
+			cwd=directory,
+			env={
+				'CC': self.config['language.c.compiler'],
+				'CXX': self.config['language.c++.compiler'],
+				'CFLAGS': self.config['language.c.flags'],
+				'CXXFLAGS': self.config['language.c++.flags']
+			}
 		)
 
 class Make(Target):
@@ -152,7 +159,7 @@ class Make(Target):
 
 	def build(self):
 		self.call(
-			self.config['scripts.make']+([] if self.config['make.targets'] is None else self.config['make.targets']),
+			self.config['scripts.make']+([] if self.config['make.targets'] is None else list(self.config['make.targets'])),
 			cwd=self.config['directory.source']
 		)
 
@@ -374,7 +381,8 @@ class TestAutotools(TestCase):
 
 		autotools = self.mock_target(Autotools, 'autotools_project', **{
 			'directory': {
-				'source': source_dir
+				'source': source_dir,
+				'root': 'ROOT_DIRECTORY'
 			},
 			'scripts': {
 				'autoreconf': [shutil.which('python3'), '-c', 'open("{}", "a").write("Autoreconf\\n")'.format(output_file)],

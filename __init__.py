@@ -14,8 +14,10 @@ from .base import Profile
 from .base import Scope
 from .base import Target
 from .config import Config
+from .process import Process
 from .tests import Skip
 from .tests import TestCase
+from . import compilers
 from . import targets
 
 if not any([ '.xz' in i[1] for i in shutil.get_unpack_formats() ]):
@@ -72,6 +74,14 @@ class Build:
 			'echo': {
 				'stdout': False,
 				'stderr': False
+			}
+		},
+		'language': {
+			'c': {
+				'flags': lambda config: compilers._get_compiler('c', config).flags
+			},
+			'c++': {
+				'flags': lambda config: compilers._get_compiler('c++', config).flags
 			}
 		}
 	}
@@ -198,6 +208,7 @@ class TestBuilder(TestCase):
 		self.assertEqual('ship', gary.config_on_build['travel', Scope.Global])
 
 	def test_defaults(self):
+		self.maxDiff = 10000
 		build = MockBuild({
 			'directory': {
 				'root': 'ROOT_DIRECTORY'
