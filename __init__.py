@@ -61,6 +61,17 @@ def _init_logger(verbosity):
 	logging.debug('Logger configured')
 
 class Build:
+	_default_warnings = {
+		'errors': False,
+		'enable': {
+			'normal': True,
+			'extensions': False,
+			'compatibility': False,
+			'performance.normal': False,
+			'performance.platform': False,
+			'system_code': False
+		}
+	}
 	_default_config = {
 		'always_outdated': False,
 		'directory': {
@@ -78,10 +89,12 @@ class Build:
 		},
 		'language': {
 			'c': {
-				'flags': lambda config: compilers._get_compiler('c', config).flags
+				'flags': lambda config: compilers._get_compiler('c', config).flags,
+				'warnings': _default_warnings
 			},
 			'c++': {
-				'flags': lambda config: compilers._get_compiler('c++', config).flags
+				'flags': lambda config: compilers._get_compiler('c++', config).flags,
+				'warnings': _default_warnings
 			}
 		}
 	}
