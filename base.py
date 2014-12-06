@@ -21,6 +21,15 @@ def samefile(first, second):
 	second = _stat(second)
 	return os.path.samestat(first, second)
 
+class Compiler:
+	def __init__(self, version, language, config):
+		self.version = version
+		self.language = language
+		self._config = config
+
+	def config(self, key):
+		return self._config['language.{}.{}'.format(self.language, key)]
+
 class Profile:
 	def __init__(self, name, config=None):
 		self.name = name
