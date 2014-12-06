@@ -35,7 +35,7 @@ class Clang(Compiler):
 		flags = []
 
 		warnings_to_errors = bool(self.config('warnings.errors'))
-		warnings_categories = [ i for i in self.config('warnings.enable') if self.config('warnings.enable.{}'.format(i)) ]
+		warnings_categories = { k for k, v in self.config('warnings.enable').items() if v }
 
 		def add_warning_flag(name, flag):
 			enabled = (name in warnings_categories)
