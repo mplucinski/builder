@@ -7,7 +7,10 @@ import sys
 import tarfile
 import unittest
 
+from .base import Profile
 from .build import Build
+from .config import ConfigDict
+from . import targets
 from .tests import Skip, TestCase
 
 if not any([ '.xz' in i[1] for i in shutil.get_unpack_formats() ]):
