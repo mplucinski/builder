@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import fcntl
 import logging
 import pty
@@ -116,11 +113,3 @@ class TestProcess(unittest.TestCase):
 		stderr = stderr.decode('utf-8').strip()
 		self.assertEqual(self.message_out, stdout)
 		self.assertEqual(self.message_err, stderr)
-
-def load_tests(loader, tests, pattern):
-	suite = unittest.TestSuite()
-	suite.addTests(loader.loadTestsFromTestCase(TestProcess))
-	return suite
-
-if __name__ == '__main__':
-	unittest.main()

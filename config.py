@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
-# -*- config: utf-8 -*-
-
 import logging
 import unittest
 
-from .tests import _fn_log
-from .tests import TestCase
+from .tests import _fn_log, TestCase
+
+class ConfigDict(dict):
+	pass
 
 class Config:
 	@staticmethod
@@ -13,7 +12,7 @@ class Config:
 		prefixed = lambda key: '{}.{}'.format(prefix, key) if prefix else key
 		output = {}
 		for key, value in dictionary.items():
-			if isinstance(value, dict):
+			if isinstance(value, ConfigDict):
 				output.update(Config._flatten_dict(value, prefixed(key)))
 			else:
 				output[prefixed(key)] = value
@@ -84,6 +83,7 @@ class Config:
 				raise KeyError(key)
 			return output
 
+	@_fn_log(logging.DEBUG-2)
 	def set(self, key, value, level=None):
 		if level is not None and self.name != level:
 			self.parent.set(key, value, level)
@@ -129,11 +129,6 @@ class Config:
 					return next(self)
 
 		return Iterator(self)
-
-class MockConfig(Config):
-	def __init__(self, name=None, config=None):
-		name = name if name is not None else 'mocked_config'
-		super().__init__(name, config=config)
 
 class TestConfig(TestCase):
 	def test_single_config(self):
@@ -187,14 +182,14 @@ class TestConfig(TestCase):
 		self.assertEqual('bar yea', config['baz'])
 
 	def test_dict_hierarchy(self):
-		config = Config('cfg', config={
-			'keyboard': {
-				'count': 104,
-				'layout': {
-					'usa': 'qwerty'
-				}
-			}
-		})
+		config = Config('cfg', config=ConfigDict(
+			keyboard=ConfigDict(
+				count=104,
+				layout=ConfigDict(
+					usa='qwerty'
+				)
+			)
+		))
 		self.assertEqual(104, config['keyboard.count'])
 		self.assertEqual('qwerty', config['keyboard.layout.usa'])
 		self.assertRaises(KeyError, lambda: config['keyboard.layout.france'])
@@ -218,22 +213,14 @@ class TestConfig(TestCase):
 		self.assertEqual({'germany': 'qwertz'}, config['keyboard.layout'])
 
 	def test_items(self):
-		cfg = {
-			'keyboard': {
-				'count': 104,
-				'layout': {
-					'usa': 'qwerty',
-					'france': 'azerty'
-				}
-			}
-		}
+		cfg = ConfigDict(
+			keyboard=ConfigDict(
+				count=104,
+				layout=ConfigDict(
+					usa='qwerty',
+					france='azerty'
+				)
+			)
+		)
 		config = Config('cfg', config=cfg)
 		self.assertEqual(Config._flatten_dict(cfg), config.items())
-
-def load_tests(loader, tests, pattern):
-	suite = unittest.TestSuite()
-	suite.addTests(loader.loadTestsFromTestCase(TestConfig))
-	return suite
-
-if __name__ == '__main__':
-	unittest.main()

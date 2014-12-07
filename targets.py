@@ -1,23 +1,16 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import copy
 import filecmp
 import logging
 import os
 import pathlib
 import shutil
-import tempfile
 import urllib
 import urllib.request
 import unittest
 
-from .base import samefile
-from .base import Scope
-from .base import Target
-from .config import MockConfig
+from .base import Scope, Target, TargetTestCase
+from .config import Config, ConfigDict
 from .tests import _fn_log
-from .tests import TestCase
 
 class Download(Target):
 	local_config_keys = {'url', 'directory.target'}
@@ -34,7 +27,7 @@ class Download(Target):
 
 	@property
 	def outdated(self):
-		return not self._target_file().is_file()
+		return not self._target_file().exists()
 
 	def build(self):
 		try:
@@ -143,10 +136,10 @@ class Autotools(Target):
 				['--prefix={}'.format(self.config['directory.root'])],
 			cwd=directory,
 			env={
-				'CC': self.config['language.c.compiler'],
-				'CXX': self.config['language.c++.compiler'],
-				'CFLAGS': self.config['language.c.flags'],
-				'CXXFLAGS': self.config['language.c++.flags']
+				'CC':       self.config['language.c.compiler'],
+				'CXX':      self.config['language.c++.compiler'],
+				'CFLAGS':   ' '.join(self.config['language.c.flags']),
+				'CXXFLAGS': ' '.join(self.config['language.c++.flags'])
 			}
 		)
 
@@ -163,31 +156,33 @@ class Make(Target):
 			cwd=self.config['directory.source']
 		)
 
-class TestDownload(TestCase):
+class TestDownload(TargetTestCase):
 	def test_download(self):
 		example_file = pathlib.Path(__file__)
-		target_dir = tempfile.TemporaryDirectory()
 
-		download = self.mock_target(Download, 'download_plane',
+		download, _ = self.mock_target(Download, 'download_plane', config=ConfigDict(
 			url=lambda config: example_file.as_uri()
+		))
+		after_download, after_download_config = self.mock_target(Target, 'after download',
+			dependencies={download},
+			config=ConfigDict({
+				'target.after_download.always_outdated': True
+			})
 		)
-		config = MockConfig(Target.GlobalTargetLevel, {
-			'directory.target': target_dir.name
-		})
-		config_1 = copy.deepcopy(config)
-		download._build(config_1)
 
-		self.assertTrue(str(config_1['target.download_plane.file.output']).endswith(example_file.name))
-		self.assertTrue(config_1['target.download_plane.build'])
+		self.run_target(after_download)
+		self.assertTrue(after_download_config.value['target.download_plane.build'])
+		downloaded_file = after_download_config.value['target.download_plane.file.output']
+		self.assertTrue(str(downloaded_file).endswith(example_file.name))
+		self.assertEqual(example_file.open().read(), downloaded_file.open().read())
 
-		config_2 = copy.deepcopy(config)
-		download._build(config_2)
-		self.assertTrue(str(config_2['target.download_plane.file.output']).endswith(example_file.name))
-		self.assertFalse(config_2['target.download_plane.build'])
+		self.run_target(after_download)
+		self.assertFalse(after_download_config.value['target.download_plane.build'])
+		downloaded_file = after_download_config.value['target.download_plane.file.output']
+		self.assertTrue(str(downloaded_file).endswith(example_file.name))
+		self.assertEqual(example_file.open().read(), downloaded_file.open().read())
 
-		target_dir.cleanup()
-
-class TestExtract(TestCase):
+class TestExtract(TargetTestCase):
 	def assertEqualDirectories(self, left, right):
 		diff = filecmp.dircmp(str(left), str(right))
 		if len(diff.left_only) != 0:
@@ -201,39 +196,35 @@ class TestExtract(TestCase):
 
 	def test_extract(self):
 		this_directory = pathlib.Path(__file__).parent
-		temp_dir = tempfile.TemporaryDirectory()
-		temp_dir_out = tempfile.TemporaryDirectory()
-		temp_dir_out_path = pathlib.Path(temp_dir_out.name)
-		archive_file = pathlib.Path(temp_dir.name)/'archive'
+		root_dir = pathlib.Path(self.root_dir.name)
+
+		archive_file = root_dir/'archive'
 		archive_file = pathlib.Path(shutil.make_archive(str(archive_file), format='gztar',
 				root_dir=str(this_directory)))
-		stamps_path = tempfile.TemporaryDirectory()
 
-		extract = self.mock_target(Extract, 'extract_files', **{
+		output_dir = root_dir/'extract'
+
+		extract, extract_config = self.mock_target(Extract, 'extract_files', config=ConfigDict({
 				'file.name': archive_file,
-				'directory.output': temp_dir_out_path,
-				'directory.stamps': stamps_path.name
-		})
-		config = MockConfig(Target.GlobalTargetLevel, {})
-		config_1 = copy.deepcopy(config)
-		extract._build(config_1)
-		self.assertTrue(config_1['target.extract_files.build'])
-		self.assertEqual(str(temp_dir_out_path), config_1['target.extract_files.directory.output'])
+				'directory.output': output_dir,
+		}))
+		after_extract, after_extract_config = self.mock_target(Target, 'after extract',
+			dependencies={extract}, config=ConfigDict({
+				'target.after_extract.always_outdated': True
+			})
+		)
 
-		self.assertEqualDirectories(this_directory, temp_dir_out_path)
+		self.run_target(after_extract)
+		self.assertTrue(after_extract_config.value['target.extract_files.build'])
+		self.assertEqual(str(output_dir), after_extract_config.value['target.extract_files.directory.output'])
+		self.assertEqualDirectories(output_dir, this_directory)
 
-		config_2 = copy.deepcopy(config)
-		extract._build(config_2)
-		self.assertFalse(config_2['target.extract_files.build'])
-		self.assertEqual(str(temp_dir_out_path), config_2['target.extract_files.directory.output'])
+		self.run_target(after_extract)
+		self.assertFalse(after_extract_config.value['target.extract_files.build'])
+		self.assertEqual(str(output_dir), after_extract_config.value['target.extract_files.directory.output'])
+		self.assertEqualDirectories(output_dir, this_directory)
 
-		self.assertEqualDirectories(this_directory, temp_dir_out_path)
-
-		stamps_path.cleanup()
-		temp_dir.cleanup()
-		temp_dir_out.cleanup()
-
-class TestPatch(TestCase):
+class TestPatch(TargetTestCase):
 	input_file = '''YODA: Code!  Yes.  A programmer's strength flows from code
       maintainability.  But beware of Perl.  Terse syntax... more
       than one way to do it...  default variables.  The dark side
@@ -272,25 +263,22 @@ YODA: You will know.  When your code you try to read six months
       from now.'''
 
 	def test_patch(self):
-		temp_dir = tempfile.TemporaryDirectory()
-		temp = pathlib.Path(temp_dir.name)
+		temp = pathlib.Path(self.root_dir.name)
 		input_file = temp/'The Empire Strikes Back.txt'
 		input_file.open('w').write(self.input_file)
 		patch_file = temp/'The Empire Strikes Back.patch'
 		patch_file.open('w').write(self.patch.format(file_name=input_file.name))
 
-		patch = self.mock_target(Patch, 'patch_files', **{
-			'directory': temp,
-			'file': patch_file
-		})
-		config = MockConfig(Target.GlobalTargetLevel, {})
-		patch._build(config)
+		patch, _ = self.mock_target(Patch, 'patch_files', config=ConfigDict(
+			directory=temp,
+			file=patch_file
+		))
+		self.run_target(patch)
 
 		output = input_file.open().read()
 		self.assertEqual(self.output_file, output)
-		temp_dir.cleanup()
 
-class TestCreate(TestCase):
+class TestCreate(TargetTestCase):
 	content = '''<refrigerator> [to dishwasher] "...so I'm inclined to believe that
 capping the capital gains tax at 13% would enable sustainable
 growth in the GNP of over 4%."'''
@@ -298,113 +286,101 @@ growth in the GNP of over 4%."'''
 	directory_name = 'example'
 
 	def test_create_file(self):
-		temp_dir = tempfile.TemporaryDirectory()
-		temp = pathlib.Path(temp_dir.name)
-		file_name = temp/self.file_name
+		root = pathlib.Path(self.root_dir.name)
+		file_name = root/self.file_name
 
-		create = self.mock_target(Create, 'create_file',
-			file={
-				'name': file_name,
-				'content': self.content
-			}
-		)
-		config = MockConfig(Target.GlobalTargetLevel)
-		create._build(config)
+		create, _ = self.mock_target(Create, 'create_file', config=ConfigDict(
+			file=ConfigDict(
+				name=file_name,
+				content=self.content
+			)
+		))
+		self.run_target(create)
 
 		output = file_name.open().read()
 		self.assertEqual(self.content, output)
-		temp_dir.cleanup()
 
 	def test_create_directory(self):
-		temp_dir = tempfile.TemporaryDirectory()
-		temp = pathlib.Path(temp_dir.name)
-		directory_name = temp/self.directory_name
+		root = pathlib.Path(self.root_dir.name)
+		directory_name = root/self.directory_name
 
-		create = self.mock_target(Create, 'create_file',
-			file={
-				'name': directory_name,
-				'kind': 'directory'
-			}
-		)
-		config = MockConfig(Target.GlobalTargetLevel)
-		create._build(config)
+		create, _ = self.mock_target(Create, 'create_file', config=ConfigDict(
+			file=ConfigDict(
+				name=directory_name,
+				kind='directory'
+			)
+		))
+		self.run_target(create)
 
 		self.assertTrue(directory_name.is_dir())
-		temp_dir.cleanup()
 
 	def test_create_file_in_directory(self):
-		temp_dir = tempfile.TemporaryDirectory()
-		temp = pathlib.Path(temp_dir.name)
-
-		directory_name = temp/self.directory_name
+		root = pathlib.Path(self.root_dir.name)
+		directory_name = root/self.directory_name
 		file_name = directory_name/self.file_name
 
-		create = self.mock_target(Create, 'create_dir_and_file',
-			file={
-				'name': str(file_name),
-				'content': self.content
-			}
-		)
-		config = MockConfig(Target.GlobalTargetLevel)
-		create._build(config)
+		create, _ = self.mock_target(Create, 'create_dir_and_file', config=ConfigDict(
+			file=ConfigDict(
+				name=str(file_name),
+				content=self.content
+			)
+		))
+		self.run_target(create)
 
 		self.assertTrue(directory_name.is_dir())
 		self.assertEqual(self.content, file_name.open().read())
 
-		temp_dir.cleanup()
-
-class TestCopy(TestCase):
+class TestCopy(TargetTestCase):
 	def test_copy(self):
 		this_directory = pathlib.Path(__file__).parent
-		temp_dir = tempfile.TemporaryDirectory()
-		temp = pathlib.Path(temp_dir.name)
+		temp = pathlib.Path(self.root_dir.name)
 
-		copy = self.mock_target(Copy, 'copy_files', **{
-			'source': lambda config: this_directory.glob('*.py'),
-			'destination': temp
-		})
-		config = MockConfig(Target.GlobalTargetLevel)
-		copy._build(config)
+		copy, _ = self.mock_target(Copy, 'copy_files', config=ConfigDict(
+			source=lambda config: this_directory.glob('*.py'),
+			destination=temp
+		))
+		self.run_target(copy)
 
 		for i in temp.iterdir():
 			if i.is_file():
 				j = this_directory/i.name
 				self.assertEqual(j.open().read(), i.open().read())
 
-		temp_dir.cleanup()
-
-class TestAutotools(TestCase):
+class TestAutotools(TargetTestCase):
 	def test_autotools(self):
-		temp_dir = tempfile.TemporaryDirectory()
-		source_dir = pathlib.Path(temp_dir.name)
-		output_file = source_dir/'output.log'
+		root_dir = pathlib.Path(self.root_dir.name)
+		(root_dir/'default'/'src').mkdir(parents=True)
+		output_file = root_dir/'output.log'
 
-		autotools = self.mock_target(Autotools, 'autotools_project', **{
-			'directory': {
-				'source': source_dir,
-				'root': 'ROOT_DIRECTORY'
-			},
-			'scripts': {
-				'autoreconf': [shutil.which('python3'), '-c', 'open("{}", "a").write("Autoreconf\\n")'.format(output_file)],
-				'configure': [shutil.which('python3'), '-c', 'open("{}", "a").write("Configure\\n")'.format(output_file)]
-			}
-		})
-		config = MockConfig(Target.GlobalTargetLevel)
-		autotools._build(config)
+		autotools, _ = self.mock_target(Autotools, 'autotools_project', config=ConfigDict(
+			scripts=ConfigDict(
+				autoreconf=[shutil.which('python3'), '-c', 'open("{}", "a").write("Autoreconf\\n")'.format(output_file)],
+				configure=[shutil.which('python3'), '-c', 'open("{}", "a").write("Configure\\n")'.format(output_file)]
+			)
+		))
+		self.run_target(autotools, build_config=ConfigDict(
+			language=ConfigDict({
+				'c': ConfigDict(
+					compiler='',
+					flags=[]
+				),
+				'c++': ConfigDict(
+					compiler='',
+					flags=[]
+				)
+			})
+		))
 
 		output = output_file.open().read()
 		self.assertEqual('Autoreconf\nConfigure\n', output)
 
-		temp_dir.cleanup()
-
-class TestMake(TestCase):
+class TestMake(TargetTestCase):
 	def test_make(self):
-		temp_dir = tempfile.TemporaryDirectory()
-		temp = pathlib.Path(temp_dir.name)
+		temp = pathlib.Path(self.root_dir.name)
 		output_file = temp/'output.log'
 
 		targets = ['a', 'b', 'c']
-		make = self.mock_target(Make, 'make_target', **{
+		make, _ = self.mock_target(Make, 'make_target', config=ConfigDict({
 			'directory.source': temp,
 			'make.targets': targets,
 			'scripts.make': lambda config: [
@@ -413,24 +389,7 @@ class TestMake(TestCase):
 					output_file, config['make.targets']
 				)
 			]
-		})
-		config = MockConfig(Target.GlobalTargetLevel)
-		make._build(config)
+		}))
+		self.run_target(make)
 
 		self.assertEqual('Make\n{}\n'.format(repr(targets)), output_file.open().read())
-
-		temp_dir.cleanup()
-
-def load_tests(loader, tests, pattern):
-	suite = unittest.TestSuite()
-	suite.addTests(loader.loadTestsFromTestCase(TestDownload))
-	suite.addTests(loader.loadTestsFromTestCase(TestExtract))
-	suite.addTests(loader.loadTestsFromTestCase(TestPatch))
-	suite.addTests(loader.loadTestsFromTestCase(TestCreate))
-	suite.addTests(loader.loadTestsFromTestCase(TestCopy))
-	suite.addTests(loader.loadTestsFromTestCase(TestAutotools))
-	suite.addTests(loader.loadTestsFromTestCase(TestMake))
-	return suite
-
-if __name__ == '__main__':
-	unittest.main()

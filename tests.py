@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import copy
+import functools
 import logging
 import pathlib
 import sys
@@ -13,6 +11,7 @@ def _log(level, msg):
 
 def _fn_log(level):
 	def wrapper1(fn):
+		@functools.wraps(fn)
 		def wrapper2(*args, **kwargs):
 			_log(level, '{}({}, {})'.format(fn.__qualname__, ', '.join(map(repr, args)),
 				', '.join(['{}={}'.format(repr(k), repr(v)) for k, v in kwargs.items()]) ))
@@ -27,48 +26,26 @@ class SkipType:
 
 Skip = SkipType
 
+class Result:
+	def __init__(self):
+		self.value = None
+
 class TestCase(unittest.TestCase):
-	_config_defaults = {
-		'always_outdated': False,
-		'language.c.compiler': 'C_COMPILER',
-		'language.c.flags': 'C_FLAGS',
-		'language.c.warnings.enable.compatibility': False,
-		'language.c.warnings.enable.extensions': False,
-		'language.c.warnings.enable.normal': True,
-		'language.c.warnings.enable.performance.normal': False,
-		'language.c.warnings.enable.performance.platform': False,
-		'language.c.warnings.enable.system_code': False,
-		'language.c.warnings.errors': False,
-		'language.c++.compiler': 'C++_COMPILER',
-		'language.c++.flags': 'C++_FLAGS',
-		'language.c++.warnings.enable.compatibility': False,
-		'language.c++.warnings.enable.extensions': False,
-		'language.c++.warnings.enable.normal': True,
-		'language.c++.warnings.enable.performance.normal': False,
-		'language.c++.warnings.enable.performance.platform': False,
-		'language.c++.warnings.enable.system_code': False,
-		'language.c++.warnings.errors': False,
-		'process.echo.stdout': False,
-		'process.echo.stderr': False
-	}
+	def setUp(self):
+		self.maxDiff = None
+		self.root_dir = tempfile.TemporaryDirectory()
 
-	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
-		self.stamps_dir = tempfile.TemporaryDirectory()
-		self._config_defaults = copy.deepcopy(self._config_defaults)
-		self._config_defaults['directory.stamps'] = self.stamps_dir.name
+	def tearDown(self):
+		self.root_dir.cleanup()
 
-	def mock_target(self, cls, *args, **kwargs):
-		for k, v in self._config_defaults.items():
-			if k in kwargs:
-				if kwargs[k] is Skip:
-					del kwargs[k]
-			else:
-				kwargs[k] = v
+	def comparatorAny(self):
+		class Comparator:
+			def __eq__(self, other):
+				return True
+		return Comparator()
 
-		target = cls(*args, **kwargs)
-		target.defaults = self._config_defaults
-		return target
+	def mock_profile(self, cls, name, config=None):
+		return cls(name, config)
 
 	def mock_process(self, stdout, stderr):
 		class MockProcess:
@@ -79,9 +56,3 @@ class TestCase(unittest.TestCase):
 				return stdout, stderr
 
 		return MockProcess
-
-if __name__ == '__main__':
-	directory = pathlib.Path(__file__).parent
-	suite = unittest.defaultTestLoader.discover(start_dir=str(directory), pattern='*.py', top_level_dir=str(directory/'..'))
-	runner = unittest.TextTestRunner(verbosity=2 if '-v' in sys.argv else 1)
-	runner.run(suite)

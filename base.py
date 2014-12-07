@@ -1,25 +1,14 @@
+import copy
+import inspect
 import logging
 import pathlib
 
-from .config import Config
+from .config import Config, ConfigDict
 from .process import Process
-from .tests import _fn_log
+from .tests import Result, TestCase, _fn_log
 
 def _code_from_name(name):
 	return name.lower().replace(' ', '_').replace('.', '_').replace('-', '_')
-
-def samefile(first, second):
-	def _stat(f):
-		try:
-			return f.stat()
-		except AttributeError:
-			import os
-			return os.stat(f)
-
-	import os.path
-	first = _stat(first)
-	second = _stat(second)
-	return os.path.samestat(first, second)
 
 class Compiler:
 	def __init__(self, version, language, config):
@@ -76,6 +65,7 @@ class TargetConfig:
 
 		return self.config.get(key=key, level=level, resolve=resolve, top_config=self)
 
+	@_fn_log(logging.DEBUG-2)
 	def set(self, key, value, scope=Scope.Local, level=None):
 		if scope == Scope.Local:
 			key = self.target._local_config_key(key)
@@ -103,15 +93,16 @@ class Target:
 	def _local_config_key(self, key):
 		return 'target.{}.{}'.format(self.code, key)
 
-	def __init__(self, name, dependencies=None, **kwargs):
-		kwargs = Config._flatten_dict(kwargs)
+	def __init__(self, name, dependencies=None, config=None):
+		config = config if config is not None else dict()
+		config = Config._flatten_dict(ConfigDict(config))
 
 		self.name = name
 		self.code = _code_from_name(name)
 		self.dependencies = dependencies if dependencies is not None else set()
-		self._config = { k: v for k, v in kwargs.items() if k not in self.local_config_keys }
-		self._config.update({ self._local_config_key(k): v for k, v in kwargs.items() if k in self.local_config_keys })
-		self._config.update({ self._local_config_key(k): v for k, v in self.local_config_defaults.items() if k not in kwargs  })
+		self._config = { k: v for k, v in config.items() if k not in self.local_config_keys }
+		self._config.update({ self._local_config_key(k): v for k, v in config.items() if k in self.local_config_keys })
+		self._config.update({ self._local_config_key(k): v for k, v in self.local_config_defaults.items() if k not in config  })
 
 	@property
 	def outdated(self):
@@ -122,11 +113,17 @@ class Target:
 			kwargs['echo_stdout'] = self.config['process.echo.stdout']
 		if not 'echo_stderr' in kwargs:
 			kwargs['echo_stderr'] = self.config['process.echo.stderr']
+		env = self.config['process.environment'].copy()
+		env.update(kwargs.pop('env', dict()))
+		kwargs['env'] = env
 		process = Process(*args, **kwargs)
 		process.communicate()
 
 	def log(self, level, message):
 		logging.log(level, '{}: {}'.format(self.name, message))
+
+	def build(self):
+		raise Exception('Target class {} should implement build() method'.format(self.__class__.__qualname__))
 
 	def post_build(self):
 		pass
@@ -147,6 +144,9 @@ class Target:
 
 		rebuild = self.config['always_outdated'] or self.outdated
 
+		self.config['build', Scope.Local, Target.GlobalTargetLevel] = rebuild
+		self.config['file.stamp', Scope.Local, Target.GlobalTargetLevel] = self._stamp_file()
+
 		if rebuild:
 			self.log(logging.INFO, 'building...')
 			self.build()
@@ -160,8 +160,31 @@ class Target:
 			self.log(logging.INFO, 'built.')
 		self.post_build()
 
-		self.config['build', Scope.Local, Target.GlobalTargetLevel] = rebuild
-		self.config['file.stamp', Scope.Local, Target.GlobalTargetLevel] = self._stamp_file()
-
 		self.config = None
 		self.log(logging.DEBUG, 'processed.')
+
+class TargetTestCase(TestCase):
+	def mock_build(self, cls, config=None):
+		if config is None:
+			config = dict()
+		config = Config._flatten_dict(config)
+		if not 'directory.root' in config:
+			config['directory.root'] = self.root_dir.name
+		return cls(config=config)
+
+	def mock_target(self, cls, *args, **kwargs):
+		target = cls(*args, **kwargs)
+		runtime_config_result = Result()
+
+		old_build = target.build if target.build.__func__ != Target.build else lambda: None
+		def build():
+			old_build()
+			runtime_config_result.value = copy.deepcopy(target.config)
+		target.build = build
+		return target, runtime_config_result
+
+	def run_target(self, target, build_config=None):
+		from .build import Build
+		build = self.mock_build(Build, config=build_config)
+		build.targets |= {target}
+		build()

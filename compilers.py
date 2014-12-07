@@ -1,11 +1,8 @@
-#!/usr/bin/env python3
-# -*- conding: utf-8 -*-
-
 import re
 import unittest
 
 from .base import Compiler
-from .config import Config
+from .config import Config, ConfigDict
 from .process import Process
 from .tests import TestCase
 
@@ -207,16 +204,7 @@ Selected GCC installation: /usr/bin/../lib/gcc/x86_64-redhat-linux/4.8.3
 
 	def test_flags_warnings(self):
 		for i in self.cases_flags_warnings:
-			config = {'language.{}.warnings'.format(i[2]): i[1]}
+			config = ConfigDict({'language.{}.warnings'.format(i[2]): ConfigDict(i[1])})
 			config = Config('test_clang_flags', config)
-#			config._dump()
 			clang = Clang('3.5.0', i[2], config)
 			self.assertEqual(i[3], clang.flags, msg=i[0])
-
-def load_tests(loader, tests, pattern):
-	suite = unittest.TestSuite()
-	suite.addTests(loader.loadTestsFromTestCase(TestClang))
-	return suite
-
-if __name__ == '__main__':
-	unittest.main()
