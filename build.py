@@ -6,6 +6,7 @@ import sys
 
 from .base import Profile, Scope, Target, TargetTestCase
 from .config import Config, ConfigDict
+from . import compilers
 
 def _init_logger(verbosity):
 	def verbosity_to_level(verbosity):
