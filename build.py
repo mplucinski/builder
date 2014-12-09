@@ -112,11 +112,12 @@ class Build:
 		_init_logger(args.verbose)
 
 		targets = self.targets
+		available_targets = self.collect_targets()
 		if args.target:
 			targets = []
 			for i in args.target:
 				try:
-					targets.append(next(j for j in self.targets if j.name == i))
+					targets.append(next(j for j in available_targets if j.name == i))
 				except StopIteration as e:
 					raise Exception('Global target "{}" not found'.format(i)) from e
 
@@ -124,6 +125,16 @@ class Build:
 			config = Config(Target.GlobalTargetLevel, {}, config)
 			target._build(config)
 
+	def collect_targets(self, start=None):
+		if start is None:
+			result = []
+			start = self.targets
+		else:
+			result = [start]
+			start = start.dependencies
+		for i in start:
+			result += self.collect_targets(i)
+		return result;
 
 class TestBuilder(TargetTestCase):
 	def test_single_target(self):
@@ -232,3 +243,13 @@ class TestBuilder(TargetTestCase):
 
 		build()
 		self.assertTrue(foo_config.value is not None)
+
+	def test_collect_target(self):
+		foo, foo_config = self.mock_target(Target, 'foo')
+		bar, bar_config = self.mock_target(Target, 'bar', dependencies={foo})
+		build = self.mock_build(Build)
+		build.targets |= {bar}
+		build(args=['foo'])
+
+		self.assertTrue(foo_config.value['build'])
+		self.assertTrue(bar_config.value is None)
