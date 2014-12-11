@@ -4,7 +4,8 @@ import unittest
 from .tests import _fn_log, TestCase
 
 class ConfigDict(dict):
-	pass
+	def __repr__(self):
+		return'<ConfigDict {}>'.format(super().__repr__())
 
 class Config:
 	@staticmethod

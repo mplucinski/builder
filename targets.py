@@ -143,6 +143,33 @@ class Autotools(Target):
 			}
 		)
 
+class CMake(Target):
+	local_config_keys = {'directory.source', 'directory.build', 'directory.target', 'scripts.cmake', 'variables'}
+	local_config_defaults = {
+		'directory.build': lambda config: config['directory.source']+'-build',
+		'directory.target': lambda config: config['directory.root'],
+		'scripts.cmake': lambda config: [shutil.which('cmake')],
+	}
+
+	def build(self):
+		source_dir = pathlib.Path(self.config['directory.source'])
+		build_dir  = pathlib.Path(self.config['directory.build'])
+		target_dir = pathlib.Path(self.config['directory.target'])
+
+		try:
+			build_dir.mkdir(parents=True)
+		except FileExistsError:
+			pass
+
+		self.config['variables.CMAKE_INSTALL_PREFIX'] = target_dir
+
+		self.call(
+			self.config['scripts.cmake']+
+				[str(source_dir)]+
+				[ '-D{}={}'.format(k, v) for k, v in self.config['variables'].items()  ],
+			cwd=str(build_dir)
+		)
+
 class Make(Target):
 	local_config_keys = {'directory.source', 'make.targets', 'scripts.make'}
 	local_config_defaults = {
@@ -373,6 +400,37 @@ class TestAutotools(TargetTestCase):
 
 		output = output_file.open().read()
 		self.assertEqual('Autoreconf\nConfigure\n', output)
+
+class TestCMake(TargetTestCase):
+	def test_cmake(self):
+		root_dir = pathlib.Path(self.root_dir.name)
+		output_file = root_dir/'output.log'
+
+		cmake_mock = '''import sys
+open("{}", "a").write("CMake\\n"+repr(sys.argv[2:]))
+'''.format(output_file)
+
+		cmake, _ = self.mock_target(CMake, 'cmake_project', config=ConfigDict(
+			scripts=ConfigDict(
+				cmake=[shutil.which('python3'), '-c', cmake_mock]
+			)
+		))
+		self.run_target(cmake, build_config=ConfigDict(
+			language=ConfigDict({
+				'c': ConfigDict(
+					compiler='',
+					flags=[]
+				),
+				'c++': ConfigDict(
+					compiler='',
+					flags=[]
+				)
+			})
+		))
+
+		output = output_file.open().read()
+		self.assertEqual('''CMake
+['-DCMAKE_INSTALL_PREFIX={}']'''.format(root_dir/'default'), output)
 
 class TestMake(TargetTestCase):
 	def test_make(self):
