@@ -4,6 +4,7 @@ import logging
 import os
 import pathlib
 import shutil
+import sys
 import urllib
 import urllib.request
 import unittest
@@ -185,6 +186,13 @@ class Make(Target):
 		self.call(
 			self.config['scripts.make']+([] if self.config['make.targets'] is None else list(self.config['make.targets'])),
 			cwd=self.config['directory.source']
+		)
+
+class Execute(Target):
+	def build(self):
+		self.call(
+			[self.config['process.name']]+self.config['process.args'],
+			cwd=self.config['process.cwd']
 		)
 
 class TestDownload(TargetTestCase):
@@ -466,3 +474,20 @@ class TestMake(TargetTestCase):
 		self.run_target(make)
 
 		self.assertEqual('Make\n{}\n'.format(repr(targets)), output_file.open().read())
+
+class TestExecute(TargetTestCase):
+	def test_execute(self):
+		temp = pathlib.Path(self.root_dir.name)
+		output_file = temp/'output.log'
+
+		execute, _ = self.mock_target(Execute, 'exec_target', config=ConfigDict({
+			'process.name': sys.executable,
+			'process.args': [
+				'-c',
+				'open("{}", "w").write("Execute in {}\\n")'.format(output_file, temp)
+			],
+			'process.cwd': temp
+		}))
+		self.run_target(execute)
+
+		self.assertEqual('Execute in {}\n'.format(temp), output_file.open().read())
