@@ -146,8 +146,8 @@ class Autotools(Target):
 class CMake(Target):
 	local_config_keys = {'directory.source', 'directory.build', 'directory.target', 'scripts.cmake', 'variables'}
 	local_config_defaults = {
-		'directory.build': lambda config: config['directory.source']+'-build',
-		'directory.target': lambda config: config['directory.root'],
+		'directory.build': lambda config: str(config['directory.source'])+'-build',
+		'directory.target': lambda config: str(config['directory.root']),
 		'scripts.cmake': lambda config: [shutil.which('cmake')],
 	}
 
