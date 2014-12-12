@@ -170,7 +170,7 @@ class CMake(Target):
 		self.call(
 			self.config['scripts.cmake']+
 				[str(source_dir)]+
-				[ '-D{}={}'.format(k, v) for k, v in self.config['variables'].items()  ],
+				[ '-D{}={}'.format(k, v if v else '""') for k, v in self.config['variables'].items()  ],
 			cwd=str(build_dir)
 		)
 
