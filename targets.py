@@ -162,6 +162,10 @@ class CMake(Target):
 			pass
 
 		self.config['variables.CMAKE_INSTALL_PREFIX'] = target_dir
+		self.config['variables.CMAKE_C_COMPILER'] = self.config['language.c.compiler']
+		self.config['variables.CMAKE_CXX_COMPILER'] = self.config['language.c++.compiler']
+		self.config['variables.CMAKE_C_FLAGS'] = ' '.join(self.config['language.c.flags'])
+		self.config['variables.CMAKE_CXX_FLAGS'] = ' '.join(self.config['language.c++.flags'])
 
 		self.call(
 			self.config['scripts.cmake']+
