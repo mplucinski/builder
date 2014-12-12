@@ -71,16 +71,16 @@ class Config:
 
 	@_fn_log(logging.DEBUG-2)
 	def get(self, key, *args, **kwargs):
+		if 'top_config' not in kwargs:
+			kwargs['top_config'] = self
 		try:
-			if 'top_config' not in kwargs:
-				kwargs['top_config'] = self
 			return self.get_single(key, *args, **kwargs)
 		except KeyError:
 			prefix = key+'.'
 			output = {}
-			for i in self:
+			for i in kwargs['top_config']:
 				if i.startswith(prefix):
-					output[i[len(prefix):]] = self[i]
+					output[i[len(prefix):]] = kwargs['top_config'][i]
 			if len(output) == 0:
 				raise KeyError(key)
 			return output
