@@ -1,11 +1,13 @@
+import logging
 import re
 import unittest
 
 from .base import Compiler
 from .config import Config, ConfigDict
 from .process import Process
-from .tests import TestCase
+from .tests import TestCase, _fn_log
 
+@_fn_log(logging.DEBUG-2)
 def _get_compiler(language, config, process_class=Process):
 	executable = config['language.{}.compiler'.format(language)]
 	for i in _supported_compilers:
@@ -18,6 +20,7 @@ def _get_compiler(language, config, process_class=Process):
 
 class Clang(Compiler):
 	@staticmethod
+	@_fn_log(logging.DEBUG-2)
 	def _detect_compiler(executable, language, config, process_class=Process):
 		process = process_class([executable, '-v'], capture_stdout=True, capture_stderr=True)
 		_, stderr = process.communicate()
@@ -28,12 +31,14 @@ class Clang(Compiler):
 		return None
 
 	@property
+	@_fn_log(logging.DEBUG-2)
 	def flags(self):
 		flags = []
 
 		warnings_to_errors = bool(self.config('warnings.errors'))
 		warnings_categories = { k for k, v in self.config('warnings.enable').items() if v }
 
+		@_fn_log(logging.DEBUG-2)
 		def add_warning_flag(name, flag):
 			enabled = (name in warnings_categories)
 			flags.append('-W{}{}'.format('' if enabled else 'no-', flag))

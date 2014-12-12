@@ -53,6 +53,7 @@ class Config:
 	def _get_subelements(self, key):
 		return { k for k in self.config if k.startswith(key+'.') }
 
+	@_fn_log(logging.DEBUG-2)
 	def get_single(self, key, top_config=None, level=None, resolve=False):
 		assert top_config is not None
 		try:
@@ -105,6 +106,7 @@ class Config:
 		parent_keys = set(self.parent.config.keys()) if self.parent is not None else set()
 		return len(set(self.config.keys()) | parent_keys)
 
+	@_fn_log(logging.DEBUG-2)
 	def __iter__(self):
 		class Iterator:
 			def __init__(self, config):
