@@ -15,8 +15,13 @@ def _fn_log(level):
 		def wrapper2(*args, **kwargs):
 			_log(level, '{}({}, {})'.format(fn.__qualname__, ', '.join(map(repr, args)),
 				', '.join(['{}={}'.format(repr(k), repr(v)) for k, v in kwargs.items()]) ))
-			r = fn(*args, **kwargs)
-			_log(level, '{}(...) = {}'.format(fn.__qualname__, repr(r)))
+			try:
+				r = fn(*args, **kwargs)
+				_log(level, '{}(...) = {}'.format(fn.__qualname__, repr(r)))
+			except:
+				exc_type, exc, trace = sys.exc_info()
+				_log(level, '{}(...) ----raise----> {} {}'.format(fn.__qualname__, exc_type, exc))
+				raise
 			return r
 		return wrapper2
 	return wrapper1
