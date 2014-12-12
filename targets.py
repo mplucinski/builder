@@ -433,8 +433,19 @@ open("{}", "a").write("CMake\\n"+repr(sys.argv[2:]))
 		))
 
 		output = output_file.open().read()
-		self.assertEqual('''CMake
-['-DCMAKE_INSTALL_PREFIX={}']'''.format(root_dir/'default'), output)
+		self.assertTrue(output.startswith('CMake'))
+		output = output[6:].strip()
+		output = eval(output)
+
+		defines = { i for i in output if i.startswith('-D') }
+
+		self.assertEqual({
+			'-DCMAKE_INSTALL_PREFIX={}'.format(root_dir/'default'),
+			'-DCMAKE_C_FLAGS=""',
+			'-DCMAKE_CXX_FLAGS=""',
+			'-DCMAKE_C_COMPILER=""',
+			'-DCMAKE_CXX_COMPILER=""'
+		}, defines)
 
 class TestMake(TargetTestCase):
 	def test_make(self):
