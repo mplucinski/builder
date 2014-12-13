@@ -156,7 +156,10 @@ class Target:
 
 		if rebuild:
 			self.log(logging.INFO, 'building...')
-			self.build()
+			try:
+				self.build()
+			except Exception as e:
+				raise Exception('Building target "{}" failed'.format(self.name)) from e
 
 			try:
 				self._stamp_file().parent.mkdir(parents=True)
