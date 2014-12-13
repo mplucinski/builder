@@ -140,7 +140,8 @@ class Autotools(Target):
 				'CC':       self.config['language.c.compiler'],
 				'CXX':      self.config['language.c++.compiler'],
 				'CFLAGS':   ' '.join(self.config['language.c.flags']),
-				'CXXFLAGS': ' '.join(self.config['language.c++.flags'])
+				'CXXFLAGS': ' '.join(self.config['language.c++.flags']),
+				'LDFLAGS':  ' '.join(self.config['linker.flags'])
 			}
 		)
 
@@ -167,11 +168,16 @@ class CMake(Target):
 		self.config['variables.CMAKE_CXX_COMPILER'] = self.config['language.c++.compiler']
 		self.config['variables.CMAKE_C_FLAGS'] = ' '.join(self.config['language.c.flags'])
 		self.config['variables.CMAKE_CXX_FLAGS'] = ' '.join(self.config['language.c++.flags'])
+		self.config['variables.CMAKE_EXE_LINKER_FLAGS'] = ' '.join(self.config['linker.flags'])
+		self.config['variables.CMAKE_MODULE_LINKER_FLAGS'] = ' '.join(self.config['linker.flags'])
+		self.config['variables.CMAKE_SHARED_LINKER_FLAGS'] = ' '.join(self.config['linker.flags'])
+		self.config['variables.CMAKE_STATIC_LINKER_FLAGS'] = ' '.join(self.config['linker.flags'])
+
 
 		self.call(
 			self.config['scripts.cmake']+
 				[str(source_dir)]+
-				[ '-D{}={}'.format(k, v if v else '""') for k, v in self.config['variables'].items()  ],
+				[ '-D{}="{}"'.format(k, v if v else '""') for k, v in self.config['variables'].items()  ],
 			cwd=str(build_dir)
 		)
 

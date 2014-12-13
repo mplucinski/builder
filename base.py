@@ -16,8 +16,14 @@ class Compiler:
 		self.language = language
 		self._config = config
 
+	def _config_key(self, key):
+		return 'language.{}.{}'.format(self.language, key)
+
+	def config_has(self, key):
+		return self._config_key(key) in self._config
+
 	def config(self, key):
-		return self._config['language.{}.{}'.format(self.language, key)]
+		return self._config[self._config_key(key)]
 
 class Profile:
 	def __init__(self, name, config=None):

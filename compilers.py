@@ -30,10 +30,22 @@ class Clang(Compiler):
 			return Clang(m.group(1), language, config)
 		return None
 
+	def _common_flags(self):
+		flags = []
+
+		if self.config_has('standard_library'):
+			flags.append('-stdlib={}'.format(self.config('standard_library')))
+
+		return flags
+
+	@property
+	def toolset(self):
+		return 'clang'
+
 	@property
 	@_fn_log(logging.DEBUG-2)
 	def flags(self):
-		flags = []
+		flags = self._common_flags()
 
 		warnings_to_errors = bool(self.config('warnings.errors'))
 		warnings_categories = { k for k, v in self.config('warnings.enable').items() if v }
@@ -64,6 +76,14 @@ class Clang(Compiler):
 			add_warning_flag('performance.platform', 'packed')
 			add_warning_flag('system_code', 'system-headers')
 
+		if self.config_has('standard'):
+			flags.append('-std={}'.format(self.config('standard').lower()))
+
+		return flags
+
+	@property
+	def linker_flags(self):
+		flags = self._common_flags()
 		return flags
 
 _supported_compilers = {Clang}

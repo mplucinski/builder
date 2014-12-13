@@ -66,14 +66,21 @@ class Build:
 		),
 		language=ConfigDict({
 			'c': ConfigDict(
+				compiler_version=lambda config: compilers._get_compiler('c', config).version,
 				flags=lambda config: compilers._get_compiler('c', config).flags,
+				toolset=lambda config: compilers._get_compiler('c', config).toolset,
 				warnings=_default_warnings
 			),
 			'c++': ConfigDict(
+				compiler_version=lambda config: compilers._get_compiler('c', config).version,
 				flags=lambda config: compilers._get_compiler('c++', config).flags,
+				toolset=lambda config: compilers._get_compiler('c++', config).toolset,
 				warnings=_default_warnings
 			)
-		})
+		}),
+		linker=ConfigDict(
+			flags=lambda config: compilers._get_compiler('c', config).linker_flags+compilers._get_compiler('c++', config).linker_flags
+		)
 	)
 
 	def _arguments_parser(self):
