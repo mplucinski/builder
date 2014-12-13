@@ -48,6 +48,7 @@ class TargetConfig:
 		return self.config.items()
 
 	@staticmethod
+	@_fn_log(logging.DEBUG-2)
 	def _arg_key(key):
 		if not isinstance(key, tuple):
 			key = (key,)
