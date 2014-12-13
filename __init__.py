@@ -7,7 +7,7 @@ import sys
 import tarfile
 import unittest
 
-from .base import Profile, Target
+from .base import Profile, Target, Scope
 from .build import Build
 from .config import ConfigDict
 from .tests import Skip, TestCase
