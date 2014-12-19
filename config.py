@@ -102,6 +102,13 @@ class Config:
 	def __setitem__(self, key, value):
 		self.set(value=value, **self._arg_key(key))
 
+	def __contains__(self, key):
+		try:
+			self[key]
+			return True
+		except KeyError:
+			return False
+
 	def __len__(self):
 		parent_keys = set(self.parent.config.keys()) if self.parent is not None else set()
 		return len(set(self.config.keys()) | parent_keys)
